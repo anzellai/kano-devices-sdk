@@ -19,17 +19,28 @@ class Device extends events.EventEmitter {
 // Mixin extending a BLEDevice
 const WandMixin = (BLEDevice) => {
     const INFO_SERVICE = BLEDevice.localUuid('64A70010-F691-4B93-A6F4-0968F5B648F8');
+    const ORGANISATION_CHARACTERISTIC = BLEDevice.localUuid('64A7000B-F691-4B93-A6F4-0968F5B648F8');
     const SOFTWARE_VERSION_CHARACTERISTIC = BLEDevice.localUuid('64A70013-F691-4B93-A6F4-0968F5B648F8');
+    const HARDWARE_BUILD_CHARACTERISTIC = BLEDevice.localUuid('64A70001-F691-4B93-A6F4-0968F5B648F8');
 
     const IO_SERVICE = BLEDevice.localUuid('64A70012-F691-4B93-A6F4-0968F5B648F8');
+    const BATTERY_STATUS_CHARACTERISTIC = BLEDevice.localUuid('64A70007-F691-4B93-A6F4-0968F5B648F8');
     const BUTTON_CHARACTERISTIC = BLEDevice.localUuid('64A7000D-F691-4B93-A6F4-0968F5B648F8');
     const VIBRATOR_CHARACTERISTIC = BLEDevice.localUuid('64A70008-F691-4B93-A6F4-0968F5B648F8');
+    const LED_CHARACTERISTIC = BLEDevice.localUuid('64A70009-F691-4B93-A6F4-0968F5B648F8');
+    const WAND_NUMBER_CHARACTERISTIC = BLEDevice.localUuid('64A7000A-F691-4B93-A6F4-0968F5B648F8');
+    const RESET_PAIRING_CHARACTERISTIC = BLEDevice.localUuid('64A7000C-F691-4B93-A6F4-0968F5B648F8');
+    const SLEEP_CHARACTERISTIC = BLEDevice.localUuid('64A7000E-F691-4B93-A6F4-0968F5B648F8');
+    const KEEP_ALIVE_CHARACTERISTIC = BLEDevice.localUuid('64A7000F-F691-4B93-A6F4-0968F5B648F8');
 
     const EULER_POSITION_SERVICE = BLEDevice.localUuid('64A70011-F691-4B93-A6F4-0968F5B648F8');
     const EULER_POSITION_CHARACTERISTIC = BLEDevice.localUuid('64A70002-F691-4B93-A6F4-0968F5B648F8');
     const CALIBRATE_GYROSCOPE_CHARACTERISTIC = BLEDevice.localUuid('64A70020-F691-4B93-A6F4-0968F5B648F8');
     const CALIBRATE_MAGNOMETER_CHARACTERISTIC = BLEDevice.localUuid('64A70021-F691-4B93-A6F4-0968F5B648F8');
 
+    /**
+     * Emits: position, battery-status, user-button, sleep
+     */
     class Wand extends BLEDevice {
         constructor(...args) {
             super(...args);
@@ -46,6 +57,107 @@ const WandMixin = (BLEDevice) => {
 
             return number;
         }
+        // --- INFORMATION ---
+        getOrganisation() {
+            return this.read(INFO_SERVICE, ORGANISATION_CHARACTERISTIC)
+                .then(data => data.toString());
+        }
+        getSoftwareVersion() {
+            return this.read(INFO_SERVICE, SOFTWARE_VERSION_CHARACTERISTIC)
+                .then(data => data.toString());
+        }
+        getHardwareBuild() {
+            return this.read(INFO_SERVICE, HARDWARE_BUILD_CHARACTERISTIC)
+                .then(data => data.toString());
+        }
+        // --- IO ---
+        getbatteryStatus() {
+            return this.read(INFO_SERVICE, BATTERY_STATUS_CHARACTERISTIC)
+                .then(data => data.toString());
+        }
+        subscribeBatteryStatus() {
+            return this.subscribe(
+                IO_SERVICE,
+                BATTERY_STATUS_CHARACTERISTIC,
+                (data) => {
+                    this.emit('battery-status', data[0]);
+                },
+            );
+        }
+        getVibratorStatus() {
+            return this.read(INFO_SERVICE, VIBRATOR_CHARACTERISTIC)
+                .then(data => data[0]);
+        }
+        vibrate(pattern) {
+            return this.write(
+                IO_SERVICE,
+                VIBRATOR_CHARACTERISTIC,
+                pattern,
+            );
+        }
+        getLedStatus() {
+            return this.read(INFO_SERVICE, LED_CHARACTERISTIC)
+                .then(data => data[0]);
+        }
+        setLed(state) {
+            return this.write(
+                IO_SERVICE,
+                LED_CHARACTERISTIC,
+                state,
+            );
+        }
+        getNumber() {
+            return this.read(INFO_SERVICE, WAND_NUMBER_CHARACTERISTIC)
+                .then(data => data[0]);
+        }
+        setNumber(n) {
+            return this.write(
+                IO_SERVICE,
+                WAND_NUMBER_CHARACTERISTIC,
+                n,
+            );
+        }
+        resetPairing() {
+            return this.write(
+                IO_SERVICE,
+                RESET_PAIRING_CHARACTERISTIC,
+                1,
+            );
+        }
+        subscribeButton() {
+            return this.subscribe(
+                IO_SERVICE,
+                BUTTON_CHARACTERISTIC,
+                (data) => {
+                    this.emit('user-button', data[0]);
+                },
+            );
+        }
+        getButtonStatus() {
+            return this.read(INFO_SERVICE, BUTTON_CHARACTERISTIC)
+                .then(data => data[0]);
+        }
+        subscribeSleep() {
+            return this.subscribe(
+                IO_SERVICE,
+                SLEEP_CHARACTERISTIC,
+                (data) => {
+                    this.emit('sleep', data[0]);
+                },
+            );
+        }
+        getSleepStatus() {
+            return this.read(INFO_SERVICE, SLEEP_CHARACTERISTIC)
+                .then(data => data[0]);
+        }
+        keepAlive() {
+            return this.write(
+                IO_SERVICE,
+                KEEP_ALIVE_CHARACTERISTIC,
+                1,
+            );
+        }
+        // --- Position ---
         subscribeEuler() {
             if (this._eulerSubscribed) {
                 return Promise.resolve();
@@ -78,27 +190,6 @@ const WandMixin = (BLEDevice) => {
                 // Stay subscribed until unsubscribe suceeds
                 this._eulerSubscribed = false;
             });
-        }
-        subscribeButton() {
-            return this.subscribe(
-                IO_SERVICE,
-                BUTTON_CHARACTERISTIC,
-                (data) => {
-                    this.emit('user-button', data[0]);
-                },
-            );
-        }
-        getSoftwareVersion() {
-            return this.read(INFO_SERVICE, SOFTWARE_VERSION_CHARACTERISTIC)
-                .then(data => data.toString());
-        }
-        vibrate(pattern) {
-            return this.setup()
-                .then(() => this.write(
-                    IO_SERVICE,
-                    VIBRATOR_CHARACTERISTIC,
-                    pattern,
-                ));
         }
         calibrateGyroscope() {
             return this.calibrateChar(EULER_POSITION_SERVICE, CALIBRATE_GYROSCOPE_CHARACTERISTIC);
@@ -144,7 +235,7 @@ const WandMixin = (BLEDevice) => {
 class Devices extends events.EventEmitter {
     constructor(opts) {
         super();
-        // If no bluetooth configuration is provided, dibale bluetooth devices
+        // If no bluetooth configuration is provided, disable bluetooth devices
         if (!opts.bluetooth) {
             this.bluetoothDisabled = true;
         }
@@ -168,7 +259,7 @@ class Devices extends events.EventEmitter {
         const device = new this.BLEDevice(peripheral);
         const deviceData = device.toJSON();
         const bluetoothInfo = deviceData.bluetooth;
-        return bluetoothInfo.name && bluetoothInfo.name.startsWith('Kano-Wand-2D');
+        return bluetoothInfo.name && bluetoothInfo.name.startsWith('Kano-Wand');
     }
     startBluetoothScan() {
         if (this.bluetoothDisabled) {
