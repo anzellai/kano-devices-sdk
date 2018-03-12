@@ -11,6 +11,18 @@ Allows the detection and comunication with Kanon devices.
 This SDK aims to be platform independant as it doesn't implement any Bluetooth, Wi-FI or serial communication.
 Instead it provides classes expecting a mixin for a BLEDevice/SerialDevice/WiFIDevice to be provided.
 
+## Platform support
+
+Some platforms are already supported and available in the `platforms` directory.
+
+### Nodejs
+
+Bluetooth communication is supported in a nodejs environment using the modules `noble` or `noble-uwp`. These modules will need to be installed in your project.
+
+### Cordova
+
+Bluetooth communication is supported in a cordova environment using the plugin cordova-plugin-bluetoothle.
+
 ## Example
 
 
