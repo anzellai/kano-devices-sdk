@@ -1,0 +1,21 @@
+{
+  "name": "kano-devices-sdk",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "cjs": "rollup -c"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "rollup": "^0.56.5"
+  },
+  "dependencies": {
+    "wolfy87-eventemitter": "^5.2.4"
+  }
+}
