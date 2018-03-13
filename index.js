@@ -1,6 +1,63 @@
 'use strict';
 
+Object.defineProperty(exports, '__esModule', { value: true });
+
 var events = require('events');
+
+class Package {
+    constructor(extractor, buffer) {
+        this.extractor = extractor;
+        this.buffer = buffer;
+        this.zipFile = null;
+        this.manifest = null;
+    }
+    load() {
+        return this.extractor.loadAsync(this.buffer)
+            .then((zipFile) => {
+                this.zipFile = zipFile;
+                try {
+                    return this.zipFile.file('manifest.json').async('string');
+                } catch (e) {
+                    throw new Error('Unable to find manifest, is this a proper DFU package?');
+                }
+            })
+            .then((content) => {
+                this.manifest = JSON.parse(content).manifest;
+                return this;
+            });
+    }
+    getImage(types) {
+        let type;
+        for (let i = 0; i < types.length; i += 1) {
+            type = types[i];
+            if (this.manifest[type]) {
+                const entry = this.manifest[type];
+                const result = {
+                    type,
+                    initFile: entry.dat_file,
+                    imageFile: entry.bin_file,
+                };
+
+                return this.zipFile.file(result.initFile).async('arraybuffer')
+                    .then((data) => {
+                        result.initData = data;
+                        return this.zipFile.file(result.imageFile).async('arraybuffer');
+                    })
+                    .then((data) => {
+                        result.imageData = data;
+                        return result;
+                    });
+            }
+        }
+        return null;
+    }
+    getBaseImage() {
+        return this.getImage(['softdevice', 'bootloader', 'softdevice_bootloader']);
+    }
+    getAppImage() {
+        return this.getImage(['application']);
+    }
+}
 
 let counter = 0;
 
@@ -232,18 +289,378 @@ const WandMixin = (BLEDevice) => {
     return Wand;
 };
 
+const CRC32 = {};
+
+CRC32.version = '1.2.0';
+/* see perf/crc32table.js */
+function signed_crc_table() {
+	var c = 0, table = new Array(256);
+
+	for(var n =0; n != 256; ++n){
+		c = n;
+		c = ((c&1) ? (-306674912 ^ (c >>> 1)) : (c >>> 1));
+		c = ((c&1) ? (-306674912 ^ (c >>> 1)) : (c >>> 1));
+		c = ((c&1) ? (-306674912 ^ (c >>> 1)) : (c >>> 1));
+		c = ((c&1) ? (-306674912 ^ (c >>> 1)) : (c >>> 1));
+		c = ((c&1) ? (-306674912 ^ (c >>> 1)) : (c >>> 1));
+		c = ((c&1) ? (-306674912 ^ (c >>> 1)) : (c >>> 1));
+		c = ((c&1) ? (-306674912 ^ (c >>> 1)) : (c >>> 1));
+		c = ((c&1) ? (-306674912 ^ (c >>> 1)) : (c >>> 1));
+		table[n] = c;
+	}
+
+	return typeof Int32Array !== 'undefined' ? new Int32Array(table) : table;
+}
+
+var T = signed_crc_table();
+function crc32_bstr(bstr, seed) {
+	var C = seed ^ -1, L = bstr.length - 1;
+	for(var i = 0; i < L;) {
+		C = (C>>>8) ^ T[(C^bstr.charCodeAt(i++))&0xFF];
+		C = (C>>>8) ^ T[(C^bstr.charCodeAt(i++))&0xFF];
+	}
+	if(i === L) C = (C>>>8) ^ T[(C ^ bstr.charCodeAt(i))&0xFF];
+	return C ^ -1;
+}
+
+function crc32_buf(buf, seed) {
+	if(buf.length > 10000) return crc32_buf_8(buf, seed);
+	var C = seed ^ -1, L = buf.length - 3;
+	for(var i = 0; i < L;) {
+		C = (C>>>8) ^ T[(C^buf[i++])&0xFF];
+		C = (C>>>8) ^ T[(C^buf[i++])&0xFF];
+		C = (C>>>8) ^ T[(C^buf[i++])&0xFF];
+		C = (C>>>8) ^ T[(C^buf[i++])&0xFF];
+	}
+	while(i < L+3) C = (C>>>8) ^ T[(C^buf[i++])&0xFF];
+	return C ^ -1;
+}
+
+function crc32_buf_8(buf, seed) {
+	var C = seed ^ -1, L = buf.length - 7;
+	for(var i = 0; i < L;) {
+		C = (C>>>8) ^ T[(C^buf[i++])&0xFF];
+		C = (C>>>8) ^ T[(C^buf[i++])&0xFF];
+		C = (C>>>8) ^ T[(C^buf[i++])&0xFF];
+		C = (C>>>8) ^ T[(C^buf[i++])&0xFF];
+		C = (C>>>8) ^ T[(C^buf[i++])&0xFF];
+		C = (C>>>8) ^ T[(C^buf[i++])&0xFF];
+		C = (C>>>8) ^ T[(C^buf[i++])&0xFF];
+		C = (C>>>8) ^ T[(C^buf[i++])&0xFF];
+	}
+	while(i < L+7) C = (C>>>8) ^ T[(C^buf[i++])&0xFF];
+	return C ^ -1;
+}
+
+function crc32_str(str, seed) {
+	var C = seed ^ -1;
+	for(var i = 0, L=str.length, c, d; i < L;) {
+		c = str.charCodeAt(i++);
+		if(c < 0x80) {
+			C = (C>>>8) ^ T[(C ^ c)&0xFF];
+		} else if(c < 0x800) {
+			C = (C>>>8) ^ T[(C ^ (192|((c>>6)&31)))&0xFF];
+			C = (C>>>8) ^ T[(C ^ (128|(c&63)))&0xFF];
+		} else if(c >= 0xD800 && c < 0xE000) {
+			c = (c&1023)+64; d = str.charCodeAt(i++)&1023;
+			C = (C>>>8) ^ T[(C ^ (240|((c>>8)&7)))&0xFF];
+			C = (C>>>8) ^ T[(C ^ (128|((c>>2)&63)))&0xFF];
+			C = (C>>>8) ^ T[(C ^ (128|((d>>6)&15)|((c&3)<<4)))&0xFF];
+			C = (C>>>8) ^ T[(C ^ (128|(d&63)))&0xFF];
+		} else {
+			C = (C>>>8) ^ T[(C ^ (224|((c>>12)&15)))&0xFF];
+			C = (C>>>8) ^ T[(C ^ (128|((c>>6)&63)))&0xFF];
+			C = (C>>>8) ^ T[(C ^ (128|(c&63)))&0xFF];
+		}
+	}
+	return C ^ -1;
+}
+CRC32.table = T;
+// $FlowIgnore
+CRC32.bstr = crc32_bstr;
+// $FlowIgnore
+CRC32.buf = crc32_buf;
+// $FlowIgnore
+CRC32.str = crc32_str;
+
+const OPERATIONS = {
+    BUTTON_COMMAND: [0x01],
+    CREATE_COMMAND: [0x01, 0x01],
+    CREATE_DATA: [0x01, 0x02],
+    RECEIPT_NOTIFICATIONS: [0x02],
+    CACULATE_CHECKSUM: [0x03],
+    EXECUTE: [0x04],
+    SELECT_COMMAND: [0x06, 0x01],
+    SELECT_DATA: [0x06, 0x02],
+    RESPONSE: [0x60, 0x20],
+};
+
+const RESPONSE = {
+    // Invalid code
+    0x00: 'Invalid opcode',
+    // Success
+    0x01: 'Operation successful',
+    // Opcode not supported
+    0x02: 'Opcode not supported',
+    // Invalid parameter
+    0x03: 'Missing or invalid parameter value',
+    // Insufficient resources
+    0x04: 'Not enough memory for the data object',
+    // Invalid object
+    0x05: 'Data object does not match the firmware and hardware requirements, the signature is wrong, or parsing the command failed',
+    // Unsupported type
+    0x07: 'Not a valid object type for a Create request',
+    // Operation not permitted
+    0x08: 'The state of the DFU process does not allow this operation',
+    // Operation failed
+    0x0A: 'Operation failed',
+    // Extended error
+    0x0B: 'Extended error',
+};
+
+const EXTENDED_ERROR = {
+    // No error
+    0x00: 'No extended error code has been set. This error indicates an implementation problem',
+    // Invalid error code
+    0x01: 'Invalid error code. This error code should never be used outside of development',
+    // Wrong command format
+    0x02: 'The format of the command was incorrect',
+    // Unknown command
+    0x03: 'The command was successfully parsed, but it is not supported or unknown',
+    // Init command invalid
+    0x04: 'The init command is invalid. The init packet either has an invalid update type or it is missing required fields for the update type',
+    // Firmware version failure
+    0x05: 'The firmware version is too low. For an application, the version must be greater than the current application. For a bootloader, it must be greater than or equal to the current version',
+    // Hardware version failure
+    0x06: 'The hardware version of the device does not match the required hardware version for the update',
+    // Softdevice version failure
+    0x07: 'The array of supported SoftDevices for the update does not contain the FWID of the current SoftDevice',
+    // Signature missing
+    0x08: 'The init packet does not contain a signature',
+    // Wrong hash type
+    0x09: 'The hash type that is specified by the init packet is not supported by the DFU bootloader',
+    // Hash failed
+    0x0A: 'The hash of the firmware image cannot be calculated',
+    // Wrong signature type
+    0x0B: 'The type of the signature is unknown or not supported by the DFU bootloader',
+    // Verification failed
+    0x0C: 'The hash of the received firmware image does not match the hash in the init packet',
+    // Insufficient space
+    0x0D: 'The available space on the device is insufficient to hold the firmware',
+};
+
+const LITTLE_ENDIAN = true;
+const PACKET_SIZE = 20;
+
+const EVENT_PROGRESS = 'progress';
+
+
+// Mixin extending a BLEDevice
+const DFUMixin = (BLEDevice) => {
+    const DFU_SERVICE = BLEDevice.localUuid('fe59');
+    const CONTROL_UUID = BLEDevice.localUuid('8ec90001-f315-4f60-9fb8-838830daea50');
+    const PACKET_UUID = BLEDevice.localUuid('8ec90002-f315-4f60-9fb8-838830daea50');
+    const BUTTON_UUID = BLEDevice.localUuid('8ec90003-f315-4f60-9fb8-838830daea50');
+
+    /**
+     * Emits: position, battery-status, user-button, sleep
+     */
+    class DFU extends BLEDevice {
+        constructor(...args) {
+            super(...args);
+            this.type = 'dfu';
+            this._transfer = {
+                type: 'none',
+                totalBytes: 0,
+            };
+        }
+
+        setDfuMode() {
+            return new Promise((resolve, reject) => {
+                this.on('disconnect', () => resolve());
+                this.subscribe(
+                    DFU_SERVICE,
+                    BUTTON_UUID,
+                    (array) => {
+                        DFU.handleResponse(array.buffer).catch(reject);
+                    },
+                )
+                    .then(() => new Promise(r => setTimeout(r, 100)))
+                    .then(() => this.sendOperation(BUTTON_UUID, OPERATIONS.BUTTON_COMMAND))
+                    .catch(reject);
+            });
+        }
+
+        static handleResponse(buffer) {
+            return new Promise((resolve, reject) => {
+                const view = new DataView(buffer);
+                let error;
+                if (OPERATIONS.RESPONSE.indexOf(view.getUint8(0)) < 0) {
+                    throw new Error('Unrecognised control characteristic response notification');
+                }
+                const result = view.getUint8(2);
+                if (result === 0x01) {
+                    const data = new DataView(view.buffer, 3);
+                    return resolve(data);
+                } else if (result === 0x0B) {
+                    const code = view.getUint8(3);
+                    error = `Error: ${EXTENDED_ERROR[code]}`;
+                } else {
+                    error = `Error: ${RESPONSE[result]}`;
+                }
+                return reject(new Error(error));
+            });
+        }
+
+        static checkCrc(buffer, crc) {
+            return crc === CRC32.buf(new Uint8Array(buffer));
+        }
+
+        transferInit(buffer) {
+            return this.transfer(buffer, 'init', OPERATIONS.SELECT_COMMAND, OPERATIONS.CREATE_COMMAND);
+        }
+
+        transferFirmware(buffer) {
+            return this.transfer(buffer, 'firmware', OPERATIONS.SELECT_DATA, OPERATIONS.CREATE_DATA);
+        }
+
+        transfer(buffer, type, selectType, createType) {
+            return this.sendControl(selectType)
+                .then((response) => {
+                    const maxSize = response.getUint32(0, LITTLE_ENDIAN);
+                    const offset = response.getUint32(4, LITTLE_ENDIAN);
+                    const crc = response.getInt32(8, LITTLE_ENDIAN);
+
+                    if (type === 'init' && offset === buffer.byteLength && DFU.checkCrc(buffer, crc)) {
+                        return Promise.resolve();
+                    }
+
+                    this.startTransfer(type, buffer.byteLength);
+
+                    return this.transferObject(buffer, createType, maxSize, offset);
+                });
+        }
+
+        startTransfer(type, totalBytes) {
+            this._transfer.type = type;
+            this._transfer.totalBytes = totalBytes;
+            this._transfer.currentBytes = 0;
+        }
+
+        transferObject(buffer, createType, maxSize, o) {
+            let offset = o;
+            const start = offset - (offset % maxSize);
+            const end = Math.min(start + maxSize, buffer.byteLength);
+
+            const view = new DataView(new ArrayBuffer(4));
+            view.setUint32(0, end - start, LITTLE_ENDIAN);
+
+            return this.sendControl(createType, view.buffer)
+                .then(() => {
+                    const data = buffer.slice(start, end);
+                    return this.transferData(data, start);
+                })
+                .then(() => this.sendControl(OPERATIONS.CACULATE_CHECKSUM))
+                .then((response) => {
+                    const crc = response.getInt32(4, LITTLE_ENDIAN);
+                    const transferred = response.getUint32(0, LITTLE_ENDIAN);
+                    const data = buffer.slice(0, transferred);
+
+                    if (DFU.checkCrc(data, crc)) {
+                        offset = transferred;
+                        return this.sendControl(OPERATIONS.EXECUTE);
+                    }
+                    return Promise.resolve();
+                })
+                .then(() => {
+                    if (end < buffer.byteLength) {
+                        return this.transferObject(buffer, createType, maxSize, offset);
+                    }
+                    return Promise.resolve();
+                });
+        }
+
+        transferData(data, offset, s) {
+            const start = s || 0;
+            const end = Math.min(start + PACKET_SIZE, data.byteLength);
+            const packet = data.slice(start, end);
+
+            return this.writePacket(packet)
+                .then(() => {
+                    this.progress(offset + end);
+
+                    if (end < data.byteLength) {
+                        return this.transferData(data, offset, end);
+                    }
+                    return null;
+                });
+        }
+
+        writePacket(packet) {
+            return this.write(DFU_SERVICE, PACKET_UUID, packet, true);
+        }
+
+        sendControl(operation, buffer) {
+            return this.sendOperation(CONTROL_UUID, operation, buffer);
+        }
+
+        sendOperation(cId, operation, buffer) {
+            let size = operation.length;
+            if (buffer) size += buffer.byteLength;
+
+            const value = new Uint8Array(size);
+            value.set(operation);
+            if (buffer) {
+                const data = new Uint8Array(buffer);
+                value.set(data, operation.length);
+            }
+            return new Promise((resolve, reject) => {
+                this.subscribe(DFU_SERVICE, cId, (response) => {
+                    this.unsubscribe(DFU_SERVICE, cId);
+                    DFU.handleResponse(response.buffer)
+                        .then(resolve, reject);
+                }).then(() => this.write(DFU_SERVICE, cId, value));
+            });
+        }
+
+        progress(n) {
+            this._transfer.currentBytes = n;
+            this.emit(EVENT_PROGRESS, this._transfer);
+        }
+
+        update(init, firmware) {
+            if (!init) {
+                throw new Error('Init not specified');
+            }
+            if (!firmware) {
+                throw new Error('Firmware not specified');
+            }
+
+            return this.transferInit(init)
+                .then(() => this.transferFirmware(firmware));
+        }
+    }
+
+    return DFU;
+};
+
+const WAND_PREFIX = 'Kano-Wand';
+
 class Devices extends events.EventEmitter {
     constructor(opts) {
         super();
         // If no bluetooth configuration is provided, disable bluetooth devices
         if (!opts.bluetooth) {
             this.bluetoothDisabled = true;
-        }
-        if (!opts.bluetooth.watcher) {
-            throw new Error('A bluetooth watcher must be provided');
-        }
-        if (!opts.bluetooth.deviceMixin) {
-            throw new Error('A bluetooth device mixin must be provided');
+        } else {
+            if (!opts.bluetooth.watcher) {
+                throw new Error('A bluetooth watcher must be provided');
+            }
+            if (!opts.bluetooth.deviceMixin) {
+                throw new Error('A bluetooth device mixin must be provided');
+            }
+            this.dfuSupported = Boolean(opts.bluetooth.extractor);
+            this.extractor = opts.bluetooth.extractor;
         }
         this.devices = new Map();
         if (!this.bluetoothDisabled) {
@@ -252,6 +669,7 @@ class Devices extends events.EventEmitter {
             // Bluetooth devices
             this.BLEDevice = this.BLEDeviceMixin(Device);
             this.Wand = WandMixin(this.BLEDevice);
+            this.DFU = DFUMixin(this.BLEDevice);
         }
         // Add here future devices
     }
@@ -259,7 +677,8 @@ class Devices extends events.EventEmitter {
         const device = new this.BLEDevice(peripheral);
         const deviceData = device.toJSON();
         const bluetoothInfo = deviceData.bluetooth;
-        return bluetoothInfo.name && bluetoothInfo.name.startsWith('Kano-Wand');
+        // Never set internally, the wandPrefix property can help debugging a specific device
+        return bluetoothInfo.name && bluetoothInfo.name.startsWith(this.wandPrefix || WAND_PREFIX);
     }
     startBluetoothScan() {
         if (this.bluetoothDisabled) {
@@ -272,9 +691,49 @@ class Devices extends events.EventEmitter {
                 this.addDevice(wand);
             });
     }
+    searchForDfuDevice(address) {
+        if (this.bluetoothDisabled) {
+            return Promise.resolve();
+        }
+        // Scan for nearby wands
+        return this.watcher.searchForDevice((peripheral) => {
+            const device = new this.BLEDevice(peripheral);
+            const deviceData = device.toJSON();
+            return deviceData.bluetooth.address === address;
+        }).then(ble => new this.DFU(ble));
+    }
+    updateDFUDevice(device, buffer) {
+        if (!this.dfuSupported) {
+            throw new Error('Cannot update DFU device. Missing extractor');
+        }
+        const dfuDevice = this.createDFUDevice(device);
+        const deviceInfo = dfuDevice.toJSON();
+        const { address } = deviceInfo.bluetooth;
+        const pck = new Package(this.extractor, buffer);
+        return pck.load()
+            .then(() => dfuDevice.setDfuMode())
+            .then(() => {
+                // Current issue in firmware. Dfu mode has the same mac address with
+                // the last number incremented by one
+                const parts = address.split(':');
+                const lastNum = parseInt(parts.pop(), 16) + 1;
+                parts.push((lastNum).toString(16));
+                return this.searchForDfuDevice(parts.join(':'));
+            })
+            .then((dfuTarget) => {
+                dfuTarget.on('progress', (transfer) => {
+                    console.log(`${transfer.type}: ${(transfer.currentBytes / transfer.totalBytes) * 100}%`);
+                });
+                return pck.getAppImage()
+                    .then(image => dfuTarget.update(image.initData, image.imageData));
+            });
+    }
     addDevice(device) {
         this.devices.set(device.id, device);
         this.emit('new-device', device);
+    }
+    createDFUDevice(device) {
+        return new this.DFU(device.device);
     }
     getById(id) {
         return this.devices.get(id);
@@ -288,4 +747,6 @@ class Devices extends events.EventEmitter {
     }
 }
 
-module.exports = Devices;
+exports.default = Devices;
+exports.Package = Package;
+exports.Devices = Devices;

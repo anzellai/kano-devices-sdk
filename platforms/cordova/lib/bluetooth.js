@@ -76,7 +76,18 @@ class Device {
         this.manager = manager;
     }
     connect() {
-        return pCall('connect', { address: this.address });
+        return new Promise((resolve, reject) => {
+            BluetoothManager.adapter.connect((result) => {
+                if (result.status === 'connected') {
+                    resolve();
+                } else if (result.status === 'disconnected') {
+                    this.emit('disconnect');
+                }
+            }, reject, { address: this.address });
+        });
+    }
+    reconnect() {
+        return pCall('reconnect', { address: this.address });
     }
     close() {
         return pCall('close', { address: this.address });

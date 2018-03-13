@@ -7,6 +7,10 @@ const BLEDeviceMixin = (Device) => {
             this.serviceCache = new Map();
             this.charCache = new Map();
             this._setupPromise = null;
+            this.device.on('disconnect', this.onDisconnect.bind(this));
+        }
+        onDisconnect() {
+            this.emit('disconnect');
         }
         setup() {
             if (!this._setupPromise) {
@@ -54,14 +58,15 @@ const BLEDeviceMixin = (Device) => {
             return this.getCharacteristic(sId, cId)
                 .then(char => BLEDevice.unsubscribe(char));
         }
-        write(sId, cId, value, withoutResponse = true) {
+        write(sId, cId, value) {
             return this.getCharacteristic(sId, cId)
                 .then(char => new Promise((resolve, reject) => {
-                    char.write(value, withoutResponse, (err) => {
+                    const withoutResponse = char.properties.indexOf('writeWithoutResponse') === -1;
+                    char.write(Buffer.from(value), withoutResponse, (err, response) => {
                         if (err) {
                             return reject(err);
                         }
-                        return resolve();
+                        return resolve(response);
                     });
                 }));
         }
