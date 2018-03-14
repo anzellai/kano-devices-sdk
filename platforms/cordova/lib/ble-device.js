@@ -5,17 +5,24 @@ const BLEDeviceMixin = (Device) => {
             this.type = 'ble-device';
             this.device = device;
             this._setupPromise = null;
+            this.device.on('disconnect', () => {
+                this._setupPromise = null;
+                this.emit('disconnect');
+            });
         }
         setup() {
             if (!this._setupPromise) {
-                this._setupPromise = this.device.connect()
+                this._setupPromise = this.connect()
                     .then(() => new Promise(resolve => setTimeout(resolve, 1000)))
-                    .then(() => this.device.discover());
+                    .then(() => this.discover());
             }
             return this._setupPromise;
         }
         connect() {
             return this.device.connect();
+        }
+        discover() {
+            return this.device.discover();
         }
         disconnect() {
             return this.device.disconnect();
@@ -59,6 +66,10 @@ const BLEDeviceMixin = (Device) => {
 
         static localUuid(uuid) {
             return uuid.toUpperCase();
+        }
+
+        static normalizeAddress(address) {
+            return address.toUpperCase();
         }
     }
     return BLEDevice;

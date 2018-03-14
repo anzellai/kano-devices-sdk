@@ -6,11 +6,16 @@ const BLEDeviceMixin = (Device) => {
             this.device = device;
             this.serviceCache = new Map();
             this.charCache = new Map();
+            this.subscriptions = new Map();
             this._setupPromise = null;
             this.device.on('disconnect', this.onDisconnect.bind(this));
         }
         onDisconnect() {
             this.emit('disconnect');
+            this._setupPromise = null;
+            this.serviceCache = new Map();
+            this.charCache = new Map();
+            this.subscriptions = new Map();
         }
         setup() {
             if (!this._setupPromise) {
@@ -51,12 +56,33 @@ const BLEDeviceMixin = (Device) => {
                 });
         }
         subscribe(sId, cId, onValue) {
-            return this.getCharacteristic(sId, cId)
-                .then(char => BLEDevice.subscribe(char, onValue));
+            const key = [sId, cId];
+            if (!this.subscriptions.has(key)) {
+                this.subscriptions.set(key, []);
+            }
+            const subscriptions = this.subscriptions.get(key);
+            subscriptions.push(onValue);
+            if (subscriptions.length === 1) {
+                return this.getCharacteristic(sId, cId)
+                    .then(char => BLEDevice.subscribe(char, (value) => {
+                        subscriptions.forEach(callback => callback(value));
+                    }));
+            }
+            return Promise.resolve();
         }
-        unsubscribe(sId, cId) {
-            return this.getCharacteristic(sId, cId)
-                .then(char => BLEDevice.unsubscribe(char));
+        unsubscribe(sId, cId, onValue) {
+            const key = [sId, cId];
+            if (!this.subscriptions.has(key)) {
+                return Promise.resolve();
+            }
+            const subscriptions = this.subscriptions.get(key);
+            const index = subscriptions.indexOf(onValue);
+            subscriptions.splice(index, 1);
+            if (subscriptions.length === 0) {
+                return this.getCharacteristic(sId, cId)
+                    .then(char => BLEDevice.unsubscribe(char));
+            }
+            return Promise.resolve();
         }
         write(sId, cId, value) {
             return this.getCharacteristic(sId, cId)
@@ -165,6 +191,9 @@ const BLEDeviceMixin = (Device) => {
         }
         static localUuid(uuid) {
             return uuid.replace(/-/g, '').toLowerCase();
+        }
+        static normalizeAddress(address) {
+            return address.toLowerCase();
         }
     }
     return BLEDevice;

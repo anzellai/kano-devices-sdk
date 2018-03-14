@@ -15,14 +15,24 @@ class Characteristic {
         this.permissions = result.permissions;
         this.descriptors = result.descriptors;
         this.service = service;
+        this.subscriptions = [];
     }
     subscribe(callback) {
+        this.subscriptions.push(callback);
+        if (this.subscriptions.length === 1) {
+            return this._subscribe();
+        }
+        return Promise.resolve();
+    }
+    _subscribe() {
         return new Promise((resolve, reject) => BluetoothManager.adapter.subscribe(
             (result) => {
                 if (result.status === 'subscribed') {
                     resolve();
                 } else if (result.status === 'subscribedResult') {
-                    callback(BluetoothManager.adapter.encodedStringToBytes(result.value));
+                    this.subscriptions.forEach((callback) => {
+                        callback(BluetoothManager.adapter.encodedStringToBytes(result.value));
+                    });
                 }
             },
             reject,
@@ -33,7 +43,15 @@ class Characteristic {
             },
         ));
     }
-    unsubscribe() {
+    unsubscribe(callback) {
+        const index = this.subscriptions.indexOf(callback);
+        this.subscriptions.splice(index, 1);
+        if (this.subscriptions.length === 0) {
+            return this._unsubscribe();
+        }
+        return Promise.resolve();
+    }
+    _unsubscribe() {
         return pCall('unsubscribe', {
             address: this.service.device.address,
             service: this.service.uuid,
@@ -48,7 +66,7 @@ class Characteristic {
         }).then(result => BluetoothManager.adapter.encodedStringToBytes(result.value));
     }
     write(value) {
-        const bytes = new Uint8Array([value]);
+        const bytes = new Uint8Array(value);
         return pCall('write', {
             address: this.service.device.address,
             service: this.service.uuid,
@@ -68,23 +86,43 @@ class Service {
     }
 }
 
-class Device {
+class Device extends EventEmitter {
     constructor(result, manager) {
+        super();
         this.address = result.address;
         this.name = result.name;
         this.services = new Map();
         this.manager = manager;
     }
     connect() {
+        return this.isConnected()
+            .then((isConnected) => {
+                if (isConnected) {
+                    return Promise.resolve();
+                }
+                return this._connect();
+            });
+    }
+    _connect() {
         return new Promise((resolve, reject) => {
             BluetoothManager.adapter.connect((result) => {
                 if (result.status === 'connected') {
                     resolve();
                 } else if (result.status === 'disconnected') {
-                    this.emit('disconnect');
+                    // Clear services cache on disconnect
+                    this.services = new Map();
+                    this.close()
+                        .then(() => {
+                            this.emit('disconnect');
+                        })
                 }
             }, reject, { address: this.address });
         });
+    }
+    isConnected() {
+        return pCall('isConnected', { address: this.address })
+            .then(status => status.isConnected)
+            .catch(() => false);
     }
     reconnect() {
         return pCall('reconnect', { address: this.address });
