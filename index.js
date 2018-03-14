@@ -128,8 +128,8 @@ const WandMixin = (BLEDevice) => {
                 .then(data => data.toString());
         }
         // --- IO ---
-        getbatteryStatus() {
-            return this.read(INFO_SERVICE, BATTERY_STATUS_CHARACTERISTIC)
+        getBatteryStatus() {
+            return this.read(IO_SERVICE, BATTERY_STATUS_CHARACTERISTIC)
                 .then(data => data.toString());
         }
         subscribeBatteryStatus() {
@@ -142,43 +142,52 @@ const WandMixin = (BLEDevice) => {
             );
         }
         getVibratorStatus() {
-            return this.read(INFO_SERVICE, VIBRATOR_CHARACTERISTIC)
+            return this.read(IO_SERVICE, VIBRATOR_CHARACTERISTIC)
                 .then(data => data[0]);
         }
         vibrate(pattern) {
             return this.write(
                 IO_SERVICE,
                 VIBRATOR_CHARACTERISTIC,
-                pattern,
+                [pattern],
             );
         }
         getLedStatus() {
-            return this.read(INFO_SERVICE, LED_CHARACTERISTIC)
+            return this.read(IO_SERVICE, LED_CHARACTERISTIC)
                 .then(data => data[0]);
         }
-        setLed(state) {
+        setLed(state, color = 0x000000) {
+            /* eslint no-bitwise: "warn" */
+            const message = new Uint8Array(3);
+            message.set([state ? 1 : 0]);
+            const r = (color >> 16) & 255;
+            const g = (color >> 8) & 255;
+            const b = color & 255;
+            const rgb565 = (((r & 248) << 8) + ((g & 252) << 3) + ((b & 248) >> 3));
+            message.set([rgb565 >> 8], 1);
+            message.set([rgb565 & 0xff], 2);
             return this.write(
                 IO_SERVICE,
                 LED_CHARACTERISTIC,
-                state,
+                message,
             );
         }
         getNumber() {
-            return this.read(INFO_SERVICE, WAND_NUMBER_CHARACTERISTIC)
+            return this.read(IO_SERVICE, WAND_NUMBER_CHARACTERISTIC)
                 .then(data => data[0]);
         }
         setNumber(n) {
             return this.write(
                 IO_SERVICE,
                 WAND_NUMBER_CHARACTERISTIC,
-                n,
+                [n],
             );
         }
         resetPairing() {
             return this.write(
                 IO_SERVICE,
                 RESET_PAIRING_CHARACTERISTIC,
-                1,
+                [1],
             );
         }
         subscribeButton() {
@@ -191,7 +200,7 @@ const WandMixin = (BLEDevice) => {
             );
         }
         getButtonStatus() {
-            return this.read(INFO_SERVICE, BUTTON_CHARACTERISTIC)
+            return this.read(IO_SERVICE, BUTTON_CHARACTERISTIC)
                 .then(data => data[0]);
         }
         subscribeSleep() {
@@ -204,14 +213,14 @@ const WandMixin = (BLEDevice) => {
             );
         }
         getSleepStatus() {
-            return this.read(INFO_SERVICE, SLEEP_CHARACTERISTIC)
+            return this.read(IO_SERVICE, SLEEP_CHARACTERISTIC)
                 .then(data => data[0]);
         }
         keepAlive() {
             return this.write(
                 IO_SERVICE,
                 KEEP_ALIVE_CHARACTERISTIC,
-                1,
+                [1],
             );
         }
         // --- Position ---
@@ -225,10 +234,11 @@ const WandMixin = (BLEDevice) => {
                 EULER_POSITION_SERVICE,
                 EULER_POSITION_CHARACTERISTIC,
                 (r) => {
-                    const roll = Wand.uInt8ToUInt16(r[0], r[1]);
-                    const pitch = Wand.uInt8ToUInt16(r[2], r[3]);
-                    const yaw = Wand.uInt8ToUInt16(r[4], r[5]);
-                    this.emit('position', [roll, pitch, yaw]);
+                    const x = Wand.uInt8ToUInt16(r[0], r[1]);
+                    const y = Wand.uInt8ToUInt16(r[2], r[3]);
+                    const w = Wand.uInt8ToUInt16(r[4], r[5]);
+                    const z = Wand.uInt8ToUInt16(r[6], r[7]);
+                    this.emit('position', [x, y, z, w]);
                 },
             ).catch((e) => {
                 // Revert state if failed to subscribe
@@ -255,7 +265,6 @@ const WandMixin = (BLEDevice) => {
             return this.calibrateChar(EULER_POSITION_SERVICE, CALIBRATE_MAGNOMETER_CHARACTERISTIC);
         }
         calibrateChar(sId, cId) {
-            const message = 1;
             const wasSubscribed = this._eulerSubscribed;
 
             return this.unsubscribeEuler()
@@ -274,7 +283,7 @@ const WandMixin = (BLEDevice) => {
                                     reject(new Error('Calibration failed'));
                                 }
                             },
-                        ).then(() => this.write(sId, cId, message));
+                        ).then(() => this.write(sId, cId, [1]));
                     });
                 })
                 .then(() => {
@@ -722,7 +731,7 @@ class Devices extends events.EventEmitter {
             })
             .then((dfuTarget) => {
                 dfuTarget.on('progress', (transfer) => {
-                    console.log(`${transfer.type}: ${(transfer.currentBytes / transfer.totalBytes) * 100}%`);
+                    device.emit('update-progress', transfer);
                 });
                 return pck.getAppImage()
                     .then(image => dfuTarget.update(image.initData, image.imageData));

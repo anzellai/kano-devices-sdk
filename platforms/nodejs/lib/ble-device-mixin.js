@@ -104,11 +104,16 @@ const BLEDeviceMixin = (Device) => {
                 });
             });
         }
-        static getService(peripheral, uuid) {
+        static getService(peripheral, uuid, retried = false) {
             return new Promise((resolve, reject) => {
                 peripheral.discoverServices([uuid], (err, services) => {
                     if (err) {
                         return reject(err);
+                    }
+                    // Services can sometime not be ready right away. Retry shortly after
+                    if (!services[0] && !retried) {
+                        return new Promise(r => setTimeout(r, 100))
+                            .then(() => BLEDevice.getService(peripheral, uuid, true));
                     }
                     return resolve(services[0]);
                 });

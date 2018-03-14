@@ -17,7 +17,7 @@ Devices.on('new-device', (device) => {
     }
 });
 
-Devices.wandPrefix = 'Kano-Wand-44';
+// Devices.wandPrefix = 'Kano-Wand-75';
 
 Devices.startBluetoothScan();
 console.log('Scanning');
