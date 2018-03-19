@@ -16,8 +16,9 @@
     "rollup": "^0.56.5"
   },
   "dependencies": {
-    "jszip": "^3.1.5",
-    "noble-uwp": "github:paulvarache/noble-uwp",
-    "wolfy87-eventemitter": "^5.2.4"
+    "jszip": "^3.1.5"
+  },
+  "optionalDependencies": {
+    "noble-uwp": "github:paulvarache/noble-uwp"
   }
 }
