@@ -58,21 +58,29 @@ class Characteristic {
             characteristic: this.uuid,
         });
     }
+    static getResponseValue(response) {
+        if (!response.value) {
+            return null;
+        }
+        return BluetoothManager.adapter.encodedStringToBytes(response.value);
+    }
     read() {
         return pCall('read', {
             address: this.service.device.address,
             service: this.service.uuid,
             characteristic: this.uuid,
-        }).then(result => BluetoothManager.adapter.encodedStringToBytes(result.value));
+        }).then(result => Characteristic.getResponseValue(result));
     }
     write(value) {
         const bytes = new Uint8Array(value);
+        const type = this.properties.writeWithoutResponse ? 'noResponse' : 'write';
         return pCall('write', {
             address: this.service.device.address,
             service: this.service.uuid,
             characteristic: this.uuid,
             value: this.service.device.manager.adapter.bytesToEncodedString(bytes),
-        }).then(result => BluetoothManager.adapter.encodedStringToBytes(result.value));
+            type,
+        }).then(result => Characteristic.getResponseValue(result));
     }
 }
 

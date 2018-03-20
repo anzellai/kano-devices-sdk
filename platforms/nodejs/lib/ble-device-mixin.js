@@ -1,4 +1,5 @@
 const Watcher = require('./ble-watcher');
+const { SubscriptionsManager } = require('../../../');
 
 const RECONNECT_SCAN_TIMEOUT = 30000;
 
@@ -7,6 +8,7 @@ const BLEDeviceMixin = (Device) => {
         constructor(device, ...args) {
             super(...args);
             this.type = 'ble-device';
+            this.device = device;
             // An abstract device will not need connection or watcher
             if (this.abstract) {
                 return;
@@ -14,7 +16,10 @@ const BLEDeviceMixin = (Device) => {
             this.onDisconnect = this.onDisconnect.bind(this);
             this.watcher = new Watcher();
             // Subscriptions persist accross device handle switch
-            this.subscriptions = new Map();
+            this.subManager = new SubscriptionsManager({
+                subscribe: this._subscribe.bind(this),
+                unsubscribe: this._unsubscribe.bind(this),
+            });
             // Reset providing the device handle found
             this.reset(device);
         }
@@ -61,9 +66,7 @@ const BLEDeviceMixin = (Device) => {
                 return;
             }
             // Flag all subscriptions as not subscribed
-            this.subscriptions.forEach((sub) => {
-                sub.subscribed = false;
-            });
+            this.subManager.flagAsUnsubscribe();
             // Clean the services/characteristics map
             this.serviceCache = new Map();
             this.charCache = new Map();
@@ -76,7 +79,7 @@ const BLEDeviceMixin = (Device) => {
         onManualDisconnect() {
             this.serviceCache = new Map();
             this.charCache = new Map();
-            this.subscriptions = new Map();
+            this.subManager.clear();
         }
         setup() {
             if (!this._setupPromise) {
@@ -112,9 +115,7 @@ const BLEDeviceMixin = (Device) => {
                         .then(() => this.discover())
                         .then(() => {
                             // Resubsribe to the characteristics if needed
-                            this.subscriptions.forEach((entry) => {
-                                this.maybeSubscribe(entry.sId, entry.cId);
-                            });
+                            this.subManager.resubscribe();
                             this.setState('reconnected');
                         });
                     return this.setup();
@@ -151,53 +152,35 @@ const BLEDeviceMixin = (Device) => {
             return `${sId}:${cId}`;
         }
         subscribe(sId, cId, onValue) {
-            const key = BLEDevice.getSubscriptionKey(sId, cId);
-            if (!this.subscriptions.has(key)) {
-                this.subscriptions.set(key, {
-                    subscribed: false,
-                    callbacks: [],
-                    sId,
-                    cId,
-                });
-            }
-            const subscriptions = this.subscriptions.get(key);
-            subscriptions.callbacks.push(onValue);
-            return this.maybeSubscribe(sId, cId);
-        }
-        maybeSubscribe(sId, cId) {
-            const key = BLEDevice.getSubscriptionKey(sId, cId);
-            const subscriptions = this.subscriptions.get(key);
-            if (!subscriptions.subscribed) {
-                subscriptions.subscribed = true;
-                const char = this.getCharacteristic(sId, cId);
-                return BLEDevice.subscribe(char, (value) => {
-                    subscriptions.callbacks.forEach(callback => callback(value));
-                });
-            }
-            return Promise.resolve();
+            return this.setup()
+                .then(() => this.subManager.subscribe(sId, cId, onValue));
         }
         unsubscribe(sId, cId, onValue) {
-            const key = [sId, cId];
-            if (!this.subscriptions.has(key)) {
-                return Promise.resolve();
-            }
-            const subscriptions = this.subscriptions.get(key);
-            const index = subscriptions.indexOf(onValue);
-            subscriptions.splice(index, 1);
-            return this.maybeUnsubscribe(sId, cId);
+            return this.setup()
+                .then(() => this.subManager.unsubscribe(sId, cId, onValue));
         }
-        maybeUnsubscribe(sId, cId) {
-            const key = BLEDevice.getSubscriptionKey(sId, cId);
-            const subscriptions = this.subscriptions.get(key);
-            if (subscriptions.subscribed) {
-                subscriptions.subscribed = false;
-                const char = this.getCharacteristic(sId, cId);
-                return BLEDevice.unsubscribe(char);
-            }
-            return Promise.resolve();
+        _subscribe(sId, cId, callback) {
+            const char = this.getCharacteristic(sId, cId);
+            return BLEDevice.subscribe(char, callback);
+        }
+        _unsubscribe(sId, cId) {
+            const char = this.getCharacteristic(sId, cId);
+            return BLEDevice.unsubscribe(char);
         }
         write(sId, cId, value) {
-            const char = this.getCharacteristic(sId, cId);
+            return this.setup()
+                .then(() => {
+                    const char = this.getCharacteristic(sId, cId);
+                    return BLEDevice.write(char, value);
+                });
+        }
+        read(sId, cId) {
+            return this.setup().then(() => {
+                const char = this.getCharacteristic(sId, cId);
+                return BLEDevice.read(char);
+            });
+        }
+        static write(char, value) {
             return new Promise((resolve, reject) => {
                 const withoutResponse = char.properties.indexOf('writeWithoutResponse') === -1;
                 char.write(Buffer.from(value), withoutResponse, (err, response) => {
@@ -208,8 +191,7 @@ const BLEDeviceMixin = (Device) => {
                 });
             });
         }
-        read(sId, cId) {
-            const char = this.getCharacteristic(sId, cId);
+        static read(char) {
             return new Promise((resolve, reject) => {
                 char.read((err, data) => {
                     if (err) {
@@ -305,6 +287,7 @@ const BLEDeviceMixin = (Device) => {
                 bluetooth: {
                     name: this.device.advertisement.localName,
                     address: this.device.address,
+                    dfuName: 'DfuTarg',
                 },
             };
         }
