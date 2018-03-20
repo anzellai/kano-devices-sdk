@@ -57,6 +57,7 @@ const BLEDeviceMixin = (Device) => {
                 bluetooth: {
                     name: this.device.name,
                     address: this.device.address,
+                    dfuName: 'DfuTarg',
                 },
             };
         }

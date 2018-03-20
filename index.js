@@ -62,10 +62,15 @@ class Package {
 let counter = 0;
 
 class Device extends events.EventEmitter {
-    constructor() {
+    constructor(abstract = false) {
         super();
-        this.id = counter.toString();
+        this.abstract = abstract;
         this.type = 'device';
+        // Abstract devices don't have an id, or increement the counter
+        if (this.abstract) {
+            return;
+        }
+        this.id = counter.toString();
         counter += 1;
     }
     terminate() {
@@ -238,7 +243,7 @@ const WandMixin = (BLEDevice) => {
                     const y = Wand.uInt8ToUInt16(r[2], r[3]);
                     const w = Wand.uInt8ToUInt16(r[4], r[5]);
                     const z = Wand.uInt8ToUInt16(r[6], r[7]);
-                    this.emit('position', [x, y, z, w]);
+                    this.emit('position', [w, x, y, z]);
                 },
             ).catch((e) => {
                 // Revert state if failed to subscribe
@@ -487,13 +492,10 @@ const DFUMixin = (BLEDevice) => {
         setDfuMode() {
             return new Promise((resolve, reject) => {
                 this.on('disconnect', () => resolve());
-                this.subscribe(
-                    DFU_SERVICE,
-                    BUTTON_UUID,
-                    (array) => {
-                        DFU.handleResponse(array.buffer).catch(reject);
-                    },
-                )
+                const onResponse = (response) => {
+                    DFU.handleResponse(response.buffer).catch(reject);
+                };
+                this.subscribe(DFU_SERVICE, BUTTON_UUID, onResponse)
                     .then(() => new Promise(r => setTimeout(r, 100)))
                     .then(() => this.sendOperation(BUTTON_UUID, OPERATIONS.BUTTON_COMMAND))
                     .catch(reject);
@@ -624,11 +626,14 @@ const DFUMixin = (BLEDevice) => {
                 value.set(data, operation.length);
             }
             return new Promise((resolve, reject) => {
-                this.subscribe(DFU_SERVICE, cId, (response) => {
-                    this.unsubscribe(DFU_SERVICE, cId);
+                const onResponse = (response) => {
+                    this.unsubscribe(DFU_SERVICE, cId, onResponse);
                     DFU.handleResponse(response.buffer)
                         .then(resolve, reject);
-                }).then(() => this.write(DFU_SERVICE, cId, value));
+                };
+                this.subscribe(DFU_SERVICE, cId, onResponse)
+                    .then(() => this.write(DFU_SERVICE, cId, value))
+                    .catch(reject);
             });
         }
 
@@ -644,7 +649,6 @@ const DFUMixin = (BLEDevice) => {
             if (!firmware) {
                 throw new Error('Firmware not specified');
             }
-
             return this.transferInit(init)
                 .then(() => this.transferFirmware(firmware));
         }
@@ -683,7 +687,7 @@ class Devices extends events.EventEmitter {
         // Add here future devices
     }
     wandTestFunction(peripheral) {
-        const device = new this.BLEDevice(peripheral);
+        const device = new this.BLEDevice(peripheral, true);
         const deviceData = device.toJSON();
         const bluetoothInfo = deviceData.bluetooth;
         // Never set internally, the wandPrefix property can help debugging a specific device
@@ -700,15 +704,14 @@ class Devices extends events.EventEmitter {
                 this.addDevice(wand);
             });
     }
-    searchForDfuDevice(address) {
+    searchForDfuDevice(name) {
         if (this.bluetoothDisabled) {
             return Promise.resolve();
         }
-        // Scan for nearby wands
         return this.watcher.searchForDevice((peripheral) => {
             const device = new this.BLEDevice(peripheral);
             const deviceData = device.toJSON();
-            return deviceData.bluetooth.address === address;
+            return deviceData.bluetooth.name === name;
         }).then(ble => new this.DFU(ble));
     }
     updateDFUDevice(device, buffer) {
@@ -717,25 +720,19 @@ class Devices extends events.EventEmitter {
         }
         const dfuDevice = this.createDFUDevice(device);
         const deviceInfo = dfuDevice.toJSON();
-        const { address } = deviceInfo.bluetooth;
+        const { dfuName } = deviceInfo.bluetooth;
         const pck = new Package(this.extractor, buffer);
         return pck.load()
             .then(() => dfuDevice.setDfuMode())
-            .then(() => {
-                // Current issue in firmware. Dfu mode has the same mac address with
-                // the last number incremented by one
-                const parts = address.split(':');
-                const lastNum = parseInt(parts.pop(), 16) + 1;
-                parts.push((lastNum).toString(16));
-                return this.searchForDfuDevice(parts.join(':'));
-            })
+            .then(() => this.searchForDfuDevice(dfuName))
             .then((dfuTarget) => {
                 dfuTarget.on('progress', (transfer) => {
                     device.emit('update-progress', transfer);
                 });
                 return pck.getAppImage()
                     .then(image => dfuTarget.update(image.initData, image.imageData));
-            });
+            })
+            .then(() => device.connect());
     }
     addDevice(device) {
         this.devices.set(device.id, device);
@@ -756,6 +753,88 @@ class Devices extends events.EventEmitter {
     }
 }
 
+class SubscriptionsManager {
+    constructor(opts = {}) {
+        this.options = Object.assign({}, {
+            subscribe() { return Promise.resolve(); },
+            unsubscribe() { return Promise.resolve(); },
+        }, opts);
+        this.subscriptions = new Map();
+    }
+
+    static getSubscriptionKey(sId, cId) {
+        return `${sId}:${cId}`;
+    }
+
+    clear() {
+        this.subscriptions = new Map();
+    }
+
+    flagAsUnsubscribe() {
+        this.subscriptions.forEach((sub) => {
+            sub.subscribed = false;
+        });
+    }
+
+    resubscribe() {
+        this.subscriptions.forEach((entry) => {
+            this.maybeSubscribe(entry.sId, entry.cId);
+        });
+    }
+
+    subscribe(sId, cId, onValue) {
+        const key = SubscriptionsManager.getSubscriptionKey(sId, cId);
+        if (!this.subscriptions.has(key)) {
+            this.subscriptions.set(key, {
+                subscribed: false,
+                callbacks: [],
+                sId,
+                cId,
+            });
+        }
+        const subscriptions = this.subscriptions.get(key);
+        subscriptions.callbacks.push(onValue);
+        return this.maybeSubscribe(sId, cId);
+    }
+    maybeSubscribe(sId, cId) {
+        const key = SubscriptionsManager.getSubscriptionKey(sId, cId);
+        const subscriptions = this.subscriptions.get(key);
+        if (!subscriptions.subscribed) {
+            subscriptions.subscribed = true;
+            return this._subscribe(sId, cId, (value) => {
+                subscriptions.callbacks.forEach(callback => callback(value));
+            });
+        }
+        return Promise.resolve();
+    }
+    unsubscribe(sId, cId, onValue) {
+        const key = [sId, cId];
+        if (!this.subscriptions.has(key)) {
+            return Promise.resolve();
+        }
+        const subscriptions = this.subscriptions.get(key);
+        const index = subscriptions.indexOf(onValue);
+        subscriptions.splice(index, 1);
+        return this.maybeUnsubscribe(sId, cId);
+    }
+    maybeUnsubscribe(sId, cId) {
+        const key = SubscriptionsManager.getSubscriptionKey(sId, cId);
+        const subscriptions = this.subscriptions.get(key);
+        if (subscriptions.subscribed) {
+            subscriptions.subscribed = false;
+            this._unsubscribe(sId, cId);
+        }
+        return Promise.resolve();
+    }
+    _subscribe(sId, cId, callback) {
+        return this.options.subscribe(sId, cId, callback);
+    }
+    _unsubscribe(sId, cId) {
+        return this.options.unsubscribe(sId, cId);
+    }
+}
+
 exports.default = Devices;
 exports.Package = Package;
 exports.Devices = Devices;
+exports.SubscriptionsManager = SubscriptionsManager;
