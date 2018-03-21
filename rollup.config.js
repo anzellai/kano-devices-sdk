@@ -13,9 +13,9 @@ export default [{
         }),
     ],
 }, {
-    input: './lib/bus-adapter/bus-adapter.js',
+    input: './bus-adapter/bus-adapter.js',
     output: {
-        file: './lib/bus-adapter/index.js',
+        file: './bus-adapter/index.js',
         format: 'cjs',
     },
 }];

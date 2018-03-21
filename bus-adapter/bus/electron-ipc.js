@@ -11,7 +11,7 @@ class ElectronIpcBus {
     }
     on(name, callback) {
         this.ipc.on(name, (event, message) => {
-            if (event.sender === window.webContents) {
+            if (event.sender === this.window.webContents) {
                 callback(message);
             }
         });
