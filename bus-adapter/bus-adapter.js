@@ -43,7 +43,7 @@ class BusAdapter {
             if (!adapter) {
                 throw new Error(`No adapter found for device '${device.type}'`);
             }
-            adapter.onDiscover(device);
+            adapter.onDiscover(device, this);
             this.bus.emit('device-available', {
                 eventId: 0,
                 error: null,
