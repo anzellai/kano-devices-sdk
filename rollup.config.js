@@ -12,4 +12,10 @@ export default [{
             './lib/event-emitter.js': 'events',
         }),
     ],
+}, {
+    input: './lib/bus-adapter/bus-adapter.js',
+    output: {
+        file: './lib/bus-adapter/index.js',
+        format: 'cjs',
+    },
 }];

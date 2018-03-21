@@ -524,6 +524,8 @@ const DFUMixin = (BLEDevice) => {
         }
 
         static checkCrc(buffer, crc) {
+            console.log('expected', crc);
+            console.log('found', CRC32.buf(new Uint8Array(buffer)));
             return crc === CRC32.buf(new Uint8Array(buffer));
         }
 

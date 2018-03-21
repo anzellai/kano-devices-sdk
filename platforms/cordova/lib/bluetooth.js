@@ -101,6 +101,7 @@ class Device extends EventEmitter {
         this.name = result.name;
         this.services = new Map();
         this.manager = manager;
+        this.discovered = false;
     }
     connect() {
         return this.isConnected()
@@ -119,10 +120,11 @@ class Device extends EventEmitter {
                 } else if (result.status === 'disconnected') {
                     // Clear services cache on disconnect
                     this.services = new Map();
+                    this.discovered = false;
                     this.close()
                         .then(() => {
                             this.emit('disconnect');
-                        })
+                        });
                 }
             }, reject, { address: this.address });
         });
@@ -142,6 +144,10 @@ class Device extends EventEmitter {
         return pCall('disconnect', { address: this.address });
     }
     discover() {
+        if (this.discovered) {
+            return Promise.resolve(this.services);
+        }
+        this.discovered = true;
         return pCall('discover', { address: this.address, clearCache: true })
             .then((result) => {
                 result.services.forEach(serviceData =>

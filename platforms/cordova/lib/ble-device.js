@@ -34,12 +34,16 @@ const BLEDeviceMixin = (Device) => {
             return this.device.disconnect();
         }
         write(sId, cId, value) {
-            const char = this.getCharacteristic(sId, cId);
-            return this.setup().then(() => char.write(value));
+            return this.setup().then(() => {
+                const char = this.getCharacteristic(sId, cId);
+                return char.write(value);
+            });
         }
         read(sId, cId) {
-            const char = this.getCharacteristic(sId, cId);
-            return this.setup().then(() => char.read());
+            return this.setup().then(() => {
+                const char = this.getCharacteristic(sId, cId);
+                return char.read();
+            });
         }
         subscribe(sId, cId, onValue) {
             return this.setup()
