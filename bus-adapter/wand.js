@@ -78,8 +78,14 @@ class WandAdapter extends DeviceAdapter {
         case 'subscribe-button': {
             return device.subscribeButton();
         }
+        case 'unsubscribe-button': {
+            return device.unsubscribeButton();
+        }
         case 'subscribe-sleep': {
             return device.subscribeSleep();
+        }
+        case 'unsubscribe-sleep': {
+            return device.unsubscribeSleep();
         }
         case 'keep-alive': {
             return device.keepAlive();
