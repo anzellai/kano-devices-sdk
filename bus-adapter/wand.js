@@ -5,7 +5,17 @@ const DEVICE_PREFIX = 'harry-potter-wand';
 
 class WandAdapter extends DeviceAdapter {
     static getDeviceSetupInfo(device) {
-        return device.toJSON();
+        const deviceData = device.toJSON();
+        return {
+            deviceId: deviceData.id,
+            deviceType: DEVICE_PREFIX,
+            availableChannels: [{
+                channel: 'ble',
+                address: deviceData.address.toString(),
+                status: deviceData.state,
+            }],
+            activeChannel: 'ble',
+        };
     }
 
     static updateDevice(adapter, device) {
