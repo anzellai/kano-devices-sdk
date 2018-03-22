@@ -24,7 +24,7 @@ class WandAdapter extends DeviceAdapter {
             'device-update',
             adapter.constructor.buildEvent(
                 deviceData.id,
-                device.toJSON(),
+                WandAdapter.getDeviceSetupInfo(device),
             ),
         );
     }
