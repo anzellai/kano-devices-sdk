@@ -1,4 +1,7 @@
 import SubscriptionsManager from '../../../lib/subscriptions-manager.js';
+import Watcher from './ble-watcher.js';
+
+const RECONNECT_SCAN_TIMEOUT = 30000;
 
 const BLEDeviceMixin = (Device) => {
     class BLEDevice extends Device {
@@ -6,15 +9,68 @@ const BLEDeviceMixin = (Device) => {
             super(...args);
             this.type = 'ble-device';
             this.device = device;
-            this._setupPromise = null;
+            // An abstract device will not need connection or watcher
+            if (this.abstract) {
+                return;
+            }
+            this.onDisconnect = this.onDisconnect.bind(this);
             this.subManager = new SubscriptionsManager({
                 subscribe: this._subscribe.bind(this),
                 unsubscribe: this._unsubscribe.bind(this),
             });
-            this.device.on('disconnect', () => {
-                this._setupPromise = null;
-                this.emit('disconnect');
-            });
+            this.watcher = new Watcher();
+        }
+        reset(device) {
+            this.device = device;
+            this._setupPromise = null;
+            this.device.on('disconnect', this.onDisconnect);
+            this.state = 'disconnected';
+        }
+        setState(state) {
+            const oldState = this.state;
+            this.state = state;
+            if (oldState !== state) {
+                switch (state) {
+                case 'connected': {
+                    this.emit('connect');
+                    break;
+                }
+                case 'reconnected': {
+                    this.emit('reconnect');
+                    break;
+                }
+                case 'disconnected': {
+                    this.emit('disconnect');
+                    break;
+                }
+                case 'connecting': {
+                    this.emit('connecting');
+                    break;
+                }
+                case 'reconnecting': {
+                    this.emit('reconnecting');
+                    break;
+                }
+                default: {
+                    break;
+                }
+                }
+            }
+        }
+        onDisconnect() {
+            if (this.state === 'disconnected' || this.state === 'connecting') {
+                return;
+            }
+            // Flag all subscriptions as not subscribed
+            this.subManager.flagAsUnsubscribe();
+            if (!this._manuallyDisconnected) {
+                this.reconnect();
+            } else {
+                this.setState('disconnected');
+            }
+        }
+        onManualDisconnect() {
+            this.subManager.clear();
         }
         setup() {
             if (!this._setupPromise) {
@@ -27,11 +83,35 @@ const BLEDeviceMixin = (Device) => {
         connect() {
             return this.device.connect();
         }
+        reconnect() {
+            this.setState('reconnecting');
+            const testFunc = p => BLEDevice.normalizeAddress(p.address) === this.device.address;
+            // Was connected before, so address should be available on apple devices
+            return this.watcher.searchForDevice(testFunc, RECONNECT_SCAN_TIMEOUT)
+                .then((device) => {
+                    // Reset this device with the device found through scan
+                    this.reset(device);
+                    // Custom setup method after a reconnect. Avoids the `connecting` state
+                    this._setupPromise = this.connect()
+                        .then(() => this.discover())
+                        .then(() => {
+                            // Resubsribe to the characteristics if needed
+                            this.subManager.resubscribe();
+                            this.setState('reconnected');
+                        });
+                    return this.setup();
+                })
+                .catch(() => {
+                    this.setState('disconnected');
+                });
+        }
         discover() {
             return this.device.discover();
         }
         disconnect() {
-            return this.device.disconnect();
+            this._manuallyDisconnected = true;
+            return this.device.disconnect()
+                .then(() => this.onManualDisconnect());
         }
         write(sId, cId, value) {
             return this.setup().then(() => {
@@ -73,8 +153,7 @@ const BLEDeviceMixin = (Device) => {
                     name: this.device.name,
                     address: this.device.address,
                     dfuName: 'DfuTarg',
-                    // TODO: Implement state and reconnection startegy for cordova
-                    state: 'connected',
+                    state: this.state,
                 },
             };
         }

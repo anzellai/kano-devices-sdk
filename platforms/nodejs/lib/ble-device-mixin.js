@@ -101,7 +101,8 @@ const BLEDeviceMixin = (Device) => {
         }
         disconnect() {
             this._manuallyDisconnected = true;
-            return BLEDevice.disconnectFromPeripheral(this.device);
+            return BLEDevice.disconnectFromPeripheral(this.device)
+                .then(() => this.onManualDisconnect());
         }
         reconnect() {
             this.setState('reconnecting');
