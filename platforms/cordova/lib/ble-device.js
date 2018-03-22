@@ -73,6 +73,8 @@ const BLEDeviceMixin = (Device) => {
                     name: this.device.name,
                     address: this.device.address,
                     dfuName: 'DfuTarg',
+                    // TODO: Implement state and reconnection startegy for cordova
+                    state: 'connected',
                 },
             };
         }

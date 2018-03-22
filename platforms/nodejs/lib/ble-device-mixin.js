@@ -285,6 +285,7 @@ const BLEDeviceMixin = (Device) => {
                     name: this.device.advertisement.localName,
                     address: this.device.address,
                     dfuName: 'DfuTarg',
+                    state: this.state,
                 },
             };
         }
