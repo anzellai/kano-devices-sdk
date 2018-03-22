@@ -2,9 +2,12 @@ class ElectronIpcBus {
     constructor(ipc, window) {
         this.ipc = ipc;
         this.window = window;
+        this.window.on('close', () => {
+            this.closed = true;
+        });
     }
     emit(name, data) {
-        if (!this.window || !this.window.webContents) {
+        if (this.closed || !this.window || !this.window.webContents) {
             return;
         }
         this.window.webContents.send(name, data);
