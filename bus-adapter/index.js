@@ -31,14 +31,30 @@ class WandAdapter extends DeviceAdapter {
             availableChannels: [{
                 channel: 'ble',
                 address: deviceData.address.toString(),
-                status: 'connected',
+                status: deviceData.state,
             }],
             activeChannel: 'ble',
         };
     }
 
+    static updateDevice(adapter, device) {
+        const deviceData = device.toJSON();
+        adapter.bus.emit(
+            'device-update',
+            adapter.constructor.buildEvent(
+                deviceData.id,
+                WandAdapter.getDeviceSetupInfo(device),
+            ),
+        );
+    }
+
     static onDiscover(device, adapter) {
         const deviceData = device.toJSON();
+        device.on('connect', () => WandAdapter.updateDevice(adapter, device));
+        device.on('connecting', () => WandAdapter.updateDevice(adapter, device));
+        device.on('reconnect', () => WandAdapter.updateDevice(adapter, device));
+        device.on('reconnecting', () => WandAdapter.updateDevice(adapter, device));
+        device.on('disconnect', () => WandAdapter.updateDevice(adapter, device));
         device.on('position', (position) => {
             adapter.bus.emit(
                 `${DEVICE_PREFIX}-position`,
