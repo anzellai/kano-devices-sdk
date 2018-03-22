@@ -23,6 +23,7 @@ function testButton(device) {
 Devices.on('new-device', (device) => {
     console.log('Found device');
     if (device.type === 'wand') {
+        device.on('f', () => {});
         device.getOrganisation()
             .then((n) => {
                 console.log(`Organisation: ${n}`);

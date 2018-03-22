@@ -148,9 +148,6 @@ const BLEDeviceMixin = (Device) => {
         getCharacteristic(sId, cId) {
             return this.charCache.get(cId);
         }
-        static getSubscriptionKey(sId, cId) {
-            return `${sId}:${cId}`;
-        }
         subscribe(sId, cId, onValue) {
             return this.setup()
                 .then(() => this.subManager.subscribe(sId, cId, onValue));
@@ -187,7 +184,7 @@ const BLEDeviceMixin = (Device) => {
                     if (err) {
                         return reject(err);
                     }
-                    return resolve(response);
+                    return resolve(new Uint8Array(response));
                 });
             });
         }
@@ -197,7 +194,7 @@ const BLEDeviceMixin = (Device) => {
                     if (err) {
                         return reject(err);
                     }
-                    return resolve(data);
+                    return resolve(new Uint8Array(data));
                 });
             });
         }
@@ -260,7 +257,7 @@ const BLEDeviceMixin = (Device) => {
             });
         }
         static subscribe(char, valueCallback) {
-            char.on('data', valueCallback);
+            char.on('data', b => valueCallback(new Uint8Array(b)));
             return new Promise((resolve, reject) => {
                 char.subscribe((err) => {
                     if (err) {
@@ -299,6 +296,9 @@ const BLEDeviceMixin = (Device) => {
         }
         static normalizeAddress(address) {
             return address.toLowerCase();
+        }
+        static uInt8ArrayToString(array) {
+            return Buffer.from(array).toString();
         }
     }
     return BLEDevice;

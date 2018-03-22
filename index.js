@@ -108,6 +108,10 @@ const WandMixin = (BLEDevice) => {
             super(...args);
             this.type = 'wand';
             this._eulerSubscribed = false;
+            this.onUserButton = this.onUserButton.bind(this);
+            this.onPosition = this.onPosition.bind(this);
+            this.onSleepStatus = this.onSleepStatus.bind(this);
+            this.onBatteryStatus = this.onBatteryStatus.bind(this);
         }
         static uInt8ToUInt16(byteA, byteB) {
             const number = (((byteB & 0xff) << 8) | byteA);
@@ -122,28 +126,33 @@ const WandMixin = (BLEDevice) => {
         // --- INFORMATION ---
         getOrganisation() {
             return this.read(INFO_SERVICE, ORGANISATION_CHARACTERISTIC)
-                .then(data => data.toString());
+                .then(data => BLEDevice.uInt8ArrayToString(data));
         }
         getSoftwareVersion() {
             return this.read(INFO_SERVICE, SOFTWARE_VERSION_CHARACTERISTIC)
-                .then(data => data.toString());
+                .then(data => BLEDevice.uInt8ArrayToString(data));
         }
         getHardwareBuild() {
             return this.read(INFO_SERVICE, HARDWARE_BUILD_CHARACTERISTIC)
-                .then(data => data.toString());
+                .then(data => data[0]);
         }
         // --- IO ---
         getBatteryStatus() {
             return this.read(IO_SERVICE, BATTERY_STATUS_CHARACTERISTIC)
-                .then(data => data.toString());
+                .then(data => data[0]);
         }
         subscribeBatteryStatus() {
             return this.subscribe(
                 IO_SERVICE,
                 BATTERY_STATUS_CHARACTERISTIC,
-                (data) => {
-                    this.emit('battery-status', data[0]);
-                },
+                this.onBatteryStatus,
+            );
+        }
+        unsubscribeBatteryStatus() {
+            return this.unsubscribe(
+                IO_SERVICE,
+                BATTERY_STATUS_CHARACTERISTIC,
+                this.onBatteryStatus,
             );
         }
         getVibratorStatus() {
@@ -199,9 +208,14 @@ const WandMixin = (BLEDevice) => {
             return this.subscribe(
                 IO_SERVICE,
                 BUTTON_CHARACTERISTIC,
-                (data) => {
-                    this.emit('user-button', data[0]);
-                },
+                this.onUserButton,
+            );
+        }
+        unsubscribeButton() {
+            return this.unsubscribe(
+                IO_SERVICE,
+                BUTTON_CHARACTERISTIC,
+                this.onUserButton,
             );
         }
         getButtonStatus() {
@@ -212,9 +226,14 @@ const WandMixin = (BLEDevice) => {
             return this.subscribe(
                 IO_SERVICE,
                 SLEEP_CHARACTERISTIC,
-                (data) => {
-                    this.emit('sleep', data[0]);
-                },
+                this.onSleepStatus,
+            );
+        }
+        unsubscribeSleep() {
+            return this.unsubscribe(
+                IO_SERVICE,
+                SLEEP_CHARACTERISTIC,
+                this.onSleepStatus,
             );
         }
         getSleepStatus() {
@@ -238,13 +257,7 @@ const WandMixin = (BLEDevice) => {
             return this.subscribe(
                 EULER_POSITION_SERVICE,
                 EULER_POSITION_CHARACTERISTIC,
-                (r) => {
-                    const x = Wand.uInt8ToUInt16(r[0], r[1]);
-                    const y = Wand.uInt8ToUInt16(r[2], r[3]);
-                    const w = Wand.uInt8ToUInt16(r[4], r[5]);
-                    const z = Wand.uInt8ToUInt16(r[6], r[7]);
-                    this.emit('position', [w, x, y, z]);
-                },
+                this.onPosition,
             ).catch((e) => {
                 // Revert state if failed to subscribe
                 this._eulerSubscribed = false;
@@ -258,6 +271,7 @@ const WandMixin = (BLEDevice) => {
             return this.unsubscribe(
                 EULER_POSITION_SERVICE,
                 EULER_POSITION_CHARACTERISTIC,
+                this.onPosition,
             ).then(() => {
                 // Stay subscribed until unsubscribe suceeds
                 this._eulerSubscribed = false;
@@ -297,6 +311,22 @@ const WandMixin = (BLEDevice) => {
                     }
                     return null;
                 });
+        }
+        onUserButton(data) {
+            this.emit('user-button', data[0]);
+        }
+        onPosition(r) {
+            const x = Wand.uInt8ToUInt16(r[0], r[1]);
+            const y = Wand.uInt8ToUInt16(r[2], r[3]);
+            const w = Wand.uInt8ToUInt16(r[4], r[5]);
+            const z = Wand.uInt8ToUInt16(r[6], r[7]);
+            this.emit('position', [w, x, y, z]);
+        }
+        onSleepStatus(data) {
+            this.emit('sleep', data[0]);
+        }
+        onBatteryStatus(data) {
+            this.emit('battery-status', data[0]);
         }
     }
 

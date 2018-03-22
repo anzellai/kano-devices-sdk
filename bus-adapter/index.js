@@ -47,8 +47,8 @@ class WandAdapter extends DeviceAdapter {
         });
         device.on('user-button', (value) => {
             adapter.bus.emit(
-                `${DEVICE_PREFIX}-user-button`,
-                adapter.constructor.buildEvent(deviceData.id, Boolean(value)),
+                `${DEVICE_PREFIX}-button`,
+                adapter.constructor.buildEvent(deviceData.id, value),
             );
         });
         device.on('battery-status', (value) => {
@@ -74,13 +74,13 @@ class WandAdapter extends DeviceAdapter {
             return device.getBatteryStatus();
         }
         case 'subscribe-battery-status': {
-            return device.subscribeBatteryStatus();
+            return device.subscribeBatteryStatus().then(() => null);
         }
         case 'unsubscribe-battery-status': {
-            return device.unsubscribeBatteryStatus();
+            return device.unsubscribeBatteryStatus().then(() => null);
         }
         case 'vibrate': {
-            return device.vibrate(message.data.detail);
+            return device.vibrate(message.data.detail).then(() => null);
         }
         case 'led-status': {
             return device.getLedStatus();
@@ -89,31 +89,37 @@ class WandAdapter extends DeviceAdapter {
             return device.setLed(
                 message.data.detail.pattern,
                 message.data.detail.value,
-            );
+            ).then(() => null);
         }
         case 'reset-pairing': {
-            return device.resetPairing();
+            return device.resetPairing().then(() => null);
         }
         case 'subscribe-button': {
-            return device.subscribeButton();
+            return device.subscribeButton().then(() => null);
+        }
+        case 'unsubscribe-button': {
+            return device.unsubscribeButton().then(() => null);
         }
         case 'subscribe-sleep': {
-            return device.subscribeSleep();
+            return device.subscribeSleep().then(() => null);
+        }
+        case 'unsubscribe-sleep': {
+            return device.unsubscribeSleep().then(() => null);
         }
         case 'keep-alive': {
-            return device.keepAlive();
+            return device.keepAlive().then(() => null);
         }
         case 'subscribe-position': {
-            return device.subscribeEuler();
+            return device.subscribeEuler().then(() => null);
         }
         case 'unsubscribe-position': {
-            return device.unsubscribeEuler();
+            return device.unsubscribeEuler().then(() => null);
         }
         case 'calibrate-gyroscope': {
-            return device.calibrateGyroscope();
+            return device.calibrateGyroscope().then(() => null);
         }
         case 'calibrate-magnetometer': {
-            return device.calibrateMagnetometer();
+            return device.calibrateMagnetometer().then(() => null);
         }
         default: {
             return null;
@@ -169,7 +175,7 @@ class BusAdapter {
             if (!adapter) {
                 throw new Error(`No adapter found for device '${device.type}'`);
             }
-            adapter.onDiscover(device);
+            adapter.onDiscover(device, this);
             this.bus.emit('device-available', {
                 eventId: 0,
                 error: null,

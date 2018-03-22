@@ -87,6 +87,9 @@ const BLEDeviceMixin = (Device) => {
         static normalizeAddress(address) {
             return address.toUpperCase();
         }
+        static uInt8ArrayToString(array) {
+            return new TextDecoder('utf-8').decode(array);
+        }
     }
     return BLEDevice;
 };
