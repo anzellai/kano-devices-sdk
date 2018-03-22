@@ -19,6 +19,6 @@
     "jszip": "^3.1.5"
   },
   "optionalDependencies": {
-    "noble-uwp": "github:paulvarache/noble-uwp"
+    "noble-uwp": "^0.6.1"
   }
 }
