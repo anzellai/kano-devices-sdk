@@ -32,7 +32,9 @@ const BLEDeviceMixin = (Device) => {
             this.state = 'disconnected';
         }
         setState(state) {
-            if (this.state !== state) {
+            const oldState = this.state;
+            this.state = state;
+            if (oldState !== state) {
                 switch (state) {
                 case 'connected': {
                     this.emit('connect');
@@ -59,7 +61,6 @@ const BLEDeviceMixin = (Device) => {
                 }
                 }
             }
-            this.state = state;
         }
         onDisconnect() {
             if (this.state === 'disconnected' || this.state === 'connecting') {
