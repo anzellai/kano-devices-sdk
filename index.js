@@ -62,8 +62,9 @@ class Package {
 let counter = 0;
 
 class Device extends events.EventEmitter {
-    constructor(abstract = false) {
+    constructor(manager, abstract = false) {
         super();
+        this.manager = manager;
         this.abstract = abstract;
         this.type = 'device';
         // Abstract devices don't have an id, or increement the counter
@@ -248,7 +249,13 @@ const WandMixin = (BLEDevice) => {
             );
         }
         // --- Position ---
-        subscribeEuler() {
+        subscribeEuler(...args) {
+            return this.subscribePosition(...args);
+        }
+        unsubscribeEuler(...args) {
+            return this.unsubscribePosition(...args);
+        }
+        subscribePosition() {
             if (this._eulerSubscribed) {
                 return Promise.resolve();
             }
@@ -264,7 +271,7 @@ const WandMixin = (BLEDevice) => {
                 throw e;
             });
         }
-        unsubscribeEuler() {
+        unsubscribePosition() {
             if (!this._eulerSubscribed) {
                 return Promise.resolve();
             }
@@ -311,6 +318,9 @@ const WandMixin = (BLEDevice) => {
                     }
                     return null;
                 });
+        }
+        update(buffer) {
+            return this.manager.updateDFUDevice(this, buffer);
         }
         onUserButton(data) {
             this.emit('user-button', data[0]);
@@ -719,7 +729,7 @@ class Devices extends events.EventEmitter {
         // Add here future devices
     }
     wandTestFunction(peripheral) {
-        const device = new this.BLEDevice(peripheral, true);
+        const device = new this.BLEDevice(peripheral, this, true);
         const deviceData = device.toJSON();
         const bluetoothInfo = deviceData.bluetooth;
         // Never set internally, the wandPrefix property can help debugging a specific device
@@ -732,7 +742,7 @@ class Devices extends events.EventEmitter {
         // Scan for nearby wands
         return this.watcher.searchForDevice(this.wandTestFunction.bind(this))
             .then((ble) => {
-                const wand = new this.Wand(ble);
+                const wand = new this.Wand(ble, this);
                 this.addDevice(wand);
             });
     }
@@ -741,10 +751,10 @@ class Devices extends events.EventEmitter {
             return Promise.resolve();
         }
         return this.watcher.searchForDevice((peripheral) => {
-            const device = new this.BLEDevice(peripheral);
+            const device = new this.BLEDevice(peripheral, this, true);
             const deviceData = device.toJSON();
             return deviceData.bluetooth.name === name;
-        }).then(ble => new this.DFU(ble));
+        }).then(ble => new this.DFU(ble, this));
     }
     updateDFUDevice(device, buffer) {
         if (!this.dfuSupported) {

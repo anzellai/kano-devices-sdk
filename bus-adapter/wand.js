@@ -38,6 +38,12 @@ class WandAdapter extends DeviceAdapter {
                 adapter.constructor.buildEvent(deviceData.id, value),
             );
         });
+        device.on('update-progress', (value) => {
+            adapter.bus.emit(
+                `${DEVICE_PREFIX}-update-progress`,
+                adapter.constructor.buildEvent(deviceData.id, value),
+            );
+        });
     }
 
     static onRequest(message, device) {
@@ -101,6 +107,9 @@ class WandAdapter extends DeviceAdapter {
         }
         case 'calibrate-magnetometer': {
             return device.calibrateMagnetometer().then(() => null);
+        }
+        case 'update': {
+            return device.update(message.data.detail).then(() => null);
         }
         default: {
             return null;

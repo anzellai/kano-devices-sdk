@@ -2,8 +2,8 @@ import SubscriptionsManager from '../../../lib/subscriptions-manager.js';
 
 const BLEDeviceMixin = (Device) => {
     class BLEDevice extends Device {
-        constructor(device) {
-            super();
+        constructor(device, ...args) {
+            super(...args);
             this.type = 'ble-device';
             this.device = device;
             this._setupPromise = null;
