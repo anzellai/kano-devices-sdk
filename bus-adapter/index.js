@@ -31,7 +31,7 @@ class WandAdapter extends DeviceAdapter {
             availableChannels: [{
                 channel: 'ble',
                 address: deviceData.address.toString(),
-                status: deviceData.state,
+                status: deviceData.bluetooth.state,
             }],
             activeChannel: 'ble',
         };
