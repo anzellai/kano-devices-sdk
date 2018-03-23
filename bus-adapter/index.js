@@ -146,6 +146,12 @@ class WandAdapter extends DeviceAdapter {
         case 'update': {
             return device.update(message.data.detail).then(() => null);
         }
+        case 'disconnect': {
+            return device.disconnect().then(() => null);
+        }
+        case 'reconnect': {
+            return device.reconnect().then(() => null);
+        }
         default: {
             return null;
         }
