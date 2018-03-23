@@ -51,7 +51,32 @@ class BusAdapter {
             });
         });
     }
+    static getAdapter(device) {
+        let adapter;
+        for (let i = 0; i < DEVICE_ADAPTERS.length; i += 1) {
+            adapter = DEVICE_ADAPTERS[i];
+            if (adapter.test(device)) {
+                return adapter;
+            }
+        }
+        return null;
+    }
     setupRequests() {
+        this.bus.on('request-available-devices', (message) => {
+            const devices = this.Devices.getAll();
+            const devicesData = devices.map((device) => {
+                const adapter = BusAdapter.getAdapter(device);
+                if (!adapter) {
+                    return null;
+                }
+                return adapter.getDeviceSetupInfo(device);
+            }).filter(deviceData => deviceData);
+            this.bus.emit('available-devices', {
+                eventId: message.eventId,
+                error: null,
+                data: devicesData,
+            });
+        });
         this.bus.on('request', (message) => {
             const device = this.Devices.getById(message.data.deviceId);
             if (!device) {

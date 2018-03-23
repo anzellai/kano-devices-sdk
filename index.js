@@ -786,6 +786,9 @@ class Devices extends events.EventEmitter {
     getById(id) {
         return this.devices.get(id);
     }
+    getAll() {
+        return Array.from(this.devices.values());
+    }
     terminate() {
         const terminations = [];
         this.devices.forEach((value) => {
