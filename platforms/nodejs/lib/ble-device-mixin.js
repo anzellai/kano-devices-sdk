@@ -40,10 +40,6 @@ const BLEDeviceMixin = (Device) => {
                     this.emit('connect');
                     break;
                 }
-                case 'reconnected': {
-                    this.emit('reconnect');
-                    break;
-                }
                 case 'disconnected': {
                     this.emit('disconnect');
                     break;
@@ -118,7 +114,7 @@ const BLEDeviceMixin = (Device) => {
                         .then(() => {
                             // Resubsribe to the characteristics if needed
                             this.subManager.resubscribe();
-                            this.setState('reconnected');
+                            this.setState('connected');
                         });
                     return this.setup();
                 })

@@ -19,6 +19,7 @@ const BLEDeviceMixin = (Device) => {
                 unsubscribe: this._unsubscribe.bind(this),
             });
             this.watcher = new Watcher();
+            this.reset(device);
         }
         reset(device) {
             this.device = device;
@@ -33,10 +34,6 @@ const BLEDeviceMixin = (Device) => {
                 switch (state) {
                 case 'connected': {
                     this.emit('connect');
-                    break;
-                }
-                case 'reconnected': {
-                    this.emit('reconnect');
                     break;
                 }
                 case 'disconnected': {
@@ -76,11 +73,18 @@ const BLEDeviceMixin = (Device) => {
             if (!this._setupPromise) {
                 this._setupPromise = this.connect()
                     .then(() => new Promise(resolve => setTimeout(resolve, 1000)))
-                    .then(() => this.discover());
+                    .then(() => this.discover())
+                    .then(() => {
+                        this.setState('connected');
+                    });
             }
             return this._setupPromise;
         }
         connect() {
+            if (this.state === 'connected') {
+                return Promise.resolve();
+            }
+            this.setState('connecting');
             return this.device.connect();
         }
         reconnect() {
@@ -92,12 +96,12 @@ const BLEDeviceMixin = (Device) => {
                     // Reset this device with the device found through scan
                     this.reset(device);
                     // Custom setup method after a reconnect. Avoids the `connecting` state
-                    this._setupPromise = this.connect()
+                    this._setupPromise = this.device.connect()
                         .then(() => this.discover())
                         .then(() => {
                             // Resubsribe to the characteristics if needed
                             this.subManager.resubscribe();
-                            this.setState('reconnected');
+                            this.setState('connected');
                         });
                     return this.setup();
                 })

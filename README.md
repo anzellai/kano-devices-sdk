@@ -64,6 +64,12 @@ export default BLEDeviceMixin;
 
 ```
 
+## Connection lifecycle
+
+A BLEDevice must track the state of its connection following this State Machine Diagram:
+
+![](./Connection-state-machine.png)
+
 ## Adapters
 
 If required to run in a brwoser environment, you can use the `kano-hardware-communication-lib` to provide a bus communication between this SDK and a browser. This can be done use the bus adapter.
