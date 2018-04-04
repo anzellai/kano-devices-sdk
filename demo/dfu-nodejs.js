@@ -26,7 +26,3 @@ console.log('Scanning');
 process.on('exit', () => {
     Devices.terminate();
 });
-
-process.on('SIGINT', () => {
-    Devices.terminate();
-});

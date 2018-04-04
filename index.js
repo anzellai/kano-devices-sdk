@@ -85,6 +85,7 @@ const WandMixin = (BLEDevice) => {
     const ORGANISATION_CHARACTERISTIC = BLEDevice.localUuid('64A7000B-F691-4B93-A6F4-0968F5B648F8');
     const SOFTWARE_VERSION_CHARACTERISTIC = BLEDevice.localUuid('64A70013-F691-4B93-A6F4-0968F5B648F8');
     const HARDWARE_BUILD_CHARACTERISTIC = BLEDevice.localUuid('64A70001-F691-4B93-A6F4-0968F5B648F8');
+    const DFU_NAME_CHARACTERISTIC = BLEDevice.localUuid('64A70003-F691-4B93-A6F4-0968F5B648F8');
 
     const IO_SERVICE = BLEDevice.localUuid('64A70012-F691-4B93-A6F4-0968F5B648F8');
     const BATTERY_STATUS_CHARACTERISTIC = BLEDevice.localUuid('64A70007-F691-4B93-A6F4-0968F5B648F8');
@@ -136,6 +137,10 @@ const WandMixin = (BLEDevice) => {
         getHardwareBuild() {
             return this.read(INFO_SERVICE, HARDWARE_BUILD_CHARACTERISTIC)
                 .then(data => data[0]);
+        }
+        getDFUName() {
+            return this.read(INFO_SERVICE, DFU_NAME_CHARACTERISTIC)
+                .then(data => BLEDevice.uInt8ArrayToString(data));
         }
         // --- IO ---
         getBatteryStatus() {
@@ -761,20 +766,24 @@ class Devices extends events.EventEmitter {
             throw new Error('Cannot update DFU device. Missing extractor');
         }
         const dfuDevice = this.createDFUDevice(device);
-        const deviceInfo = dfuDevice.toJSON();
-        const { dfuName } = deviceInfo.bluetooth;
         const pck = new Package(this.extractor, buffer);
-        return pck.load()
-            .then(() => dfuDevice.setDfuMode())
-            .then(() => this.searchForDfuDevice(dfuName))
-            .then((dfuTarget) => {
-                dfuTarget.on('progress', (transfer) => {
-                    device.emit('update-progress', transfer);
-                });
-                return pck.getAppImage()
-                    .then(image => dfuTarget.update(image.initData, image.imageData));
-            })
-            .then(() => device.connect());
+        if (!device.getDFUName) {
+            throw new Error('Device must report DFU name to be updated');
+        }
+        return device.getDFUName()
+            .then((dfuName) => {
+                return pck.load()
+                    .then(() => dfuDevice.setDfuMode())
+                    .then(() => this.searchForDfuDevice(dfuName))
+                    .then((dfuTarget) => {
+                        dfuTarget.on('progress', (transfer) => {
+                            device.emit('update-progress', transfer);
+                        });
+                        return pck.getAppImage()
+                            .then(image => dfuTarget.update(image.initData, image.imageData));
+                    })
+                    .then(() => device.connect());
+            });
     }
     addDevice(device) {
         this.devices.set(device.id, device);
@@ -853,13 +862,12 @@ class SubscriptionsManager {
         return Promise.resolve();
     }
     unsubscribe(sId, cId, onValue) {
-        const key = [sId, cId];
-        if (!this.subscriptions.has(key)) {
+        const key = SubscriptionsManager.getSubscriptionKey(sId, cId);        if (!this.subscriptions.has(key)) {
             return Promise.resolve();
         }
         const subscriptions = this.subscriptions.get(key);
-        const index = subscriptions.indexOf(onValue);
-        subscriptions.splice(index, 1);
+        const index = subscriptions.callbacks.indexOf(onValue);
+        subscriptions.callbacks.splice(index, 1);
         return this.maybeUnsubscribe(sId, cId);
     }
     maybeUnsubscribe(sId, cId) {

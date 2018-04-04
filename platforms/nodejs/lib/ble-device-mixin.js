@@ -177,7 +177,7 @@ const BLEDeviceMixin = (Device) => {
         }
         static write(char, value) {
             return new Promise((resolve, reject) => {
-                const withoutResponse = char.properties.indexOf('writeWithoutResponse') === -1;
+                const withoutResponse = char.properties.indexOf('writeWithoutResponse') !== -1;
                 char.write(Buffer.from(value), withoutResponse, (err, response) => {
                     if (err) {
                         return reject(err);
