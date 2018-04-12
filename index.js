@@ -101,6 +101,7 @@ const WandMixin = (BLEDevice) => {
     const EULER_POSITION_CHARACTERISTIC = BLEDevice.localUuid('64A70002-F691-4B93-A6F4-0968F5B648F8');
     const CALIBRATE_GYROSCOPE_CHARACTERISTIC = BLEDevice.localUuid('64A70020-F691-4B93-A6F4-0968F5B648F8');
     const CALIBRATE_MAGNOMETER_CHARACTERISTIC = BLEDevice.localUuid('64A70021-F691-4B93-A6F4-0968F5B648F8');
+    const RESET_QUATERNIONS_CHARACTERISTIC = BLEDevice.localUuid('64A70004-F691-4B93-A6F4-0968F5B648F8');
 
     /**
      * Emits: position, battery-status, user-button, sleep
@@ -295,6 +296,9 @@ const WandMixin = (BLEDevice) => {
         calibrateMagnetometer() {
             return this.calibrateChar(EULER_POSITION_SERVICE, CALIBRATE_MAGNOMETER_CHARACTERISTIC);
         }
+        resetQuaternions() {
+            return this.write(EULER_POSITION_SERVICE, RESET_QUATERNIONS_CHARACTERISTIC, [1]);
+        }
         calibrateChar(sId, cId) {
             const wasSubscribed = this._eulerSubscribed;
 
@@ -331,9 +335,9 @@ const WandMixin = (BLEDevice) => {
             this.emit('user-button', data[0]);
         }
         onPosition(r) {
-            const x = Wand.uInt8ToUInt16(r[0], r[1]);
-            const y = Wand.uInt8ToUInt16(r[2], r[3]);
-            const w = Wand.uInt8ToUInt16(r[4], r[5]);
+            const w = Wand.uInt8ToUInt16(r[0], r[1]);
+            const x = Wand.uInt8ToUInt16(r[2], r[3]);
+            const y = Wand.uInt8ToUInt16(r[4], r[5]);
             const z = Wand.uInt8ToUInt16(r[6], r[7]);
             this.emit('position', [w, x, y, z]);
         }
