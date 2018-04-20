@@ -97,6 +97,11 @@ const BLEDeviceMixin = (Device) => {
         }
         disconnect() {
             this._manuallyDisconnected = true;
+
+            if (this.state == 'disconnected') {
+                return Promise.resolve();
+            }
+
             return BLEDevice.disconnectFromPeripheral(this.device)
                 .then(() => this.onManualDisconnect());
         }
@@ -288,6 +293,7 @@ const BLEDeviceMixin = (Device) => {
             };
         }
         terminate() {
+            this.removeAllListeners();
             return this.disconnect();
         }
         static localUuid(uuid) {

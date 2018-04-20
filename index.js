@@ -104,6 +104,7 @@ const WandMixin = (BLEDevice) => {
     const RESET_QUATERNIONS_CHARACTERISTIC = BLEDevice.localUuid('64A70004-F691-4B93-A6F4-0968F5B648F8');
     const TEMPERATURE_CHARACTERISTIC = BLEDevice.localUuid('64A70014-F691-4B93-A6F4-0968F5B648F8');
 
+
     /**
      * Emits: position, temperature, battery-status, user-button, sleep
      */
