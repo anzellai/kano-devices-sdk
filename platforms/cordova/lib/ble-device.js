@@ -177,9 +177,8 @@ const BLEDeviceMixin = (Device) => {
                 id: this.id,
                 address: this.device.address,
                 bluetooth: {
-                    name: this.device.advertisement.localName,
+                    name: this.device.name,
                     address: this.device.address,
-                    dfuName: 'DfuTarg',
                     state: this.state,
                 },
             };

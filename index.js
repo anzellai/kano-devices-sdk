@@ -85,7 +85,6 @@ const WandMixin = (BLEDevice) => {
     const ORGANISATION_CHARACTERISTIC = BLEDevice.localUuid('64A7000B-F691-4B93-A6F4-0968F5B648F8');
     const SOFTWARE_VERSION_CHARACTERISTIC = BLEDevice.localUuid('64A70013-F691-4B93-A6F4-0968F5B648F8');
     const HARDWARE_BUILD_CHARACTERISTIC = BLEDevice.localUuid('64A70001-F691-4B93-A6F4-0968F5B648F8');
-    const DFU_NAME_CHARACTERISTIC = BLEDevice.localUuid('64A70003-F691-4B93-A6F4-0968F5B648F8');
 
     const IO_SERVICE = BLEDevice.localUuid('64A70012-F691-4B93-A6F4-0968F5B648F8');
     const BATTERY_STATUS_CHARACTERISTIC = BLEDevice.localUuid('64A70007-F691-4B93-A6F4-0968F5B648F8');
@@ -141,10 +140,6 @@ const WandMixin = (BLEDevice) => {
         getHardwareBuild() {
             return this.read(INFO_SERVICE, HARDWARE_BUILD_CHARACTERISTIC)
                 .then(data => data[0]);
-        }
-        getDFUName() {
-            return this.read(INFO_SERVICE, DFU_NAME_CHARACTERISTIC)
-                .then(data => BLEDevice.uInt8ArrayToString(data));
         }
         // --- IO ---
         getBatteryStatus() {
@@ -484,6 +479,7 @@ CRC32.str = crc32_str;
 
 const OPERATIONS = {
     BUTTON_COMMAND: [0x01],
+    SET_DFU_NAME: [0x02],
     CREATE_COMMAND: [0x01, 0x01],
     CREATE_DATA: [0x01, 0x02],
     RECEIPT_NOTIFICATIONS: [0x02],
@@ -581,6 +577,16 @@ const DFUMixin = (BLEDevice) => {
                     DFU.handleResponse(response.buffer).catch(reject);
                 };
                 this.subscribe(DFU_SERVICE, BUTTON_UUID, onResponse)
+                    .then(() => new Promise(r => setTimeout(r, 100)))
+                    .then(() => {
+                        let auxAddress = this.device.address.substr(this.device.address.length - 5).replace(':', '-');
+                        this.dfuName = `DFU-${auxAddress}`;
+                        return this.sendOperation(
+                            BUTTON_UUID, 
+                            OPERATIONS.SET_DFU_NAME.concat(this.dfuName.length), 
+                            new Buffer(this.dfuName)
+                        );
+                    })
                     .then(() => new Promise(r => setTimeout(r, 100)))
                     .then(() => this.sendOperation(BUTTON_UUID, OPERATIONS.BUTTON_COMMAND))
                     .catch(reject);
@@ -857,9 +863,11 @@ class Devices extends events.EventEmitter {
                     device.emit('update-progress', transfer);
                 });
                 return pck.getAppImage()
-                    .then(image => dfuTarget.update(image.initData, image.imageData));
+                    .then(image => dfuTarget.update(image.initData, image.imageData))
+                    .then(() => dfuTarget.terminate());
             })
             .then(() => device.connect());
+
     }
     addDevice(device) {
         let alreadyAdded = false;
@@ -868,7 +876,6 @@ class Devices extends events.EventEmitter {
                 alreadyAdded = true;
             }
         });
-        // Check if the device exists already
         if (!alreadyAdded) {
             this.devices.set(device.id, device);
             this.emit('new-device', device);
