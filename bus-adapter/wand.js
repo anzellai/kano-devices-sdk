@@ -133,6 +133,9 @@ class WandAdapter extends DeviceAdapter {
         case 'reconnect': {
             return device.reconnect().then(() => null);
         }
+        case 'reset-quaternions': {
+            return device.resetQuaternions().then(() => null);
+        }
         default: {
             return null;
         }

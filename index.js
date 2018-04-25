@@ -103,6 +103,7 @@ const WandMixin = (BLEDevice) => {
     const CALIBRATE_MAGNOMETER_CHARACTERISTIC = BLEDevice.localUuid('64A70021-F691-4B93-A6F4-0968F5B648F8');
     const RESET_QUATERNIONS_CHARACTERISTIC = BLEDevice.localUuid('64A70004-F691-4B93-A6F4-0968F5B648F8');
 
+
     /**
      * Emits: position, battery-status, user-button, sleep
      */

@@ -152,6 +152,9 @@ class WandAdapter extends DeviceAdapter {
         case 'reconnect': {
             return device.reconnect().then(() => null);
         }
+        case 'reset-quaternions': {
+            return device.resetQuaternions().then(() => null);
+        }
         default: {
             return null;
         }
@@ -164,7 +167,6 @@ class WandAdapter extends DeviceAdapter {
 }
 
 const DEVICE_ADAPTERS = [WandAdapter];
-
 
 class BusAdapter {
     constructor(opts = {}) {
@@ -239,6 +241,17 @@ class BusAdapter {
                 error: null,
                 data: devicesData,
             });
+        });
+        this.bus.on('start-bluetooth-scan', (message) => {
+            this.Devices.startBluetoothScan()
+                .catch(() => {})
+                .then(() => {
+                    this.bus.emit('bluetooth-scan-end', {
+                        eventId: message.eventId,
+                        error: null,
+                        data: null,
+                    });
+                });
         });
         this.bus.on('request', (message) => {
             const device = this.Devices.getById(message.data.deviceId);
