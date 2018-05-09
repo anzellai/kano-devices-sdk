@@ -102,15 +102,17 @@ const WandMixin = (BLEDevice) => {
     const CALIBRATE_GYROSCOPE_CHARACTERISTIC = BLEDevice.localUuid('64A70020-F691-4B93-A6F4-0968F5B648F8');
     const CALIBRATE_MAGNOMETER_CHARACTERISTIC = BLEDevice.localUuid('64A70021-F691-4B93-A6F4-0968F5B648F8');
     const RESET_QUATERNIONS_CHARACTERISTIC = BLEDevice.localUuid('64A70004-F691-4B93-A6F4-0968F5B648F8');
+    const TEMPERATURE_CHARACTERISTIC = BLEDevice.localUuid('64A70014-F691-4B93-A6F4-0968F5B648F8');
 
     /**
-     * Emits: position, battery-status, user-button, sleep
+     * Emits: position, temperature, battery-status, user-button, sleep
      */
     class Wand extends BLEDevice {
         constructor(...args) {
             super(...args);
             this.type = 'wand';
             this._eulerSubscribed = false;
+            this._temperatureSubscribed = false;
             this.onUserButton = this.onUserButton.bind(this);
             this.onPosition = this.onPosition.bind(this);
             this.onSleepStatus = this.onSleepStatus.bind(this);
@@ -290,6 +292,35 @@ const WandMixin = (BLEDevice) => {
                 this._eulerSubscribed = false;
             });
         }
+        subscribeTemperature() {
+            if (this._temperatureSubscribed) {
+                return Promise.resolve();
+            }
+            // Synchronous state change. Multiple calls to subscribe will stop after the first
+            this._temperatureSubscribed = true;
+            return this.subscribe(
+                EULER_POSITION_SERVICE,
+                TEMPERATURE_CHARACTERISTIC,
+                this.onTemperature,
+            ).catch((e) => {
+                // Revert state if failed to subscribe
+                this._temperatureSubscribed = false;
+                throw e;
+            });
+        }
+        unsubscribeTemperature() {
+            if (!this._temperatureSubscribed) {
+                return Promise.resolve();
+            }
+            return this.unsubscribe(
+                EULER_POSITION_SERVICE,
+                TEMPERATURE_CHARACTERISTIC,
+                this.onTemperature,
+            ).then(() => {
+                // Stay subscribed until unsubscribe suceeds
+                this._temperatureSubscribed = false;
+            });
+        }
         calibrateGyroscope() {
             return this.calibrateChar(EULER_POSITION_SERVICE, CALIBRATE_GYROSCOPE_CHARACTERISTIC);
         }
@@ -340,6 +371,10 @@ const WandMixin = (BLEDevice) => {
             const y = Wand.uInt8ToUInt16(r[4], r[5]);
             const z = Wand.uInt8ToUInt16(r[6], r[7]);
             this.emit('position', [w, x, y, z]);
+        }
+        onTemperature(temperature) {
+            let auxTemperature = Wand.uInt8ToUInt16(temperature[0], temperature[1]);
+            this.emit('temperature', auxTemperature);
         }
         onSleepStatus(data) {
             this.emit('sleep', data[0]);
@@ -755,6 +790,41 @@ class Devices extends events.EventEmitter {
                 this.addDevice(wand);
             });
     }
+    getClosestWand(timeout) {
+        if (this.bluetoothDisabled) {
+            return Promise.resolve();
+        }
+        return new Promise((resolve, reject) => {
+            this.watcher.startScan()
+                .then(() => {
+                    setTimeout(() => {
+                        let closestDevice = undefined;
+                        this.watcher.getDevices(this.wandTestFunction.bind(this))
+                            .forEach(device => {
+                                let wand = new this.Wand(device, this);
+                                this.addDevice(wand);
+                                closestDevice = closestDevice || wand;
+                                console.log('Comparing', closestDevice.device.rssi, wand.device.rssi);
+                                if (closestDevice.device.rssi < wand.device.rssi) {
+                                    closestDevice = wand;
+                                }
+                            });
+                        if (!closestDevice) {
+                            return reject();
+                        }
+                        return resolve(closestDevice);
+                    }, timeout);
+                })
+                .catch(e => console.log("Unable to start the scan", e));
+        });
+    }
+    stopBluetoothScan() {
+        if (this.bluetoothDisabled) {
+            return Promise.resolve();
+        }
+        // Stop the scan 
+        return this.watcher.stopScan();
+    }
     searchForDfuDevice(name) {
         if (this.bluetoothDisabled) {
             return Promise.resolve();
@@ -771,27 +841,37 @@ class Devices extends events.EventEmitter {
         }
         const dfuDevice = this.createDFUDevice(device);
         const pck = new Package(this.extractor, buffer);
-        if (!device.getDFUName) {
-            throw new Error('Device must report DFU name to be updated');
-        }
-        return device.getDFUName()
-            .then((dfuName) => {
-                return pck.load()
-                    .then(() => dfuDevice.setDfuMode())
-                    .then(() => this.searchForDfuDevice(dfuName))
-                    .then((dfuTarget) => {
-                        dfuTarget.on('progress', (transfer) => {
-                            device.emit('update-progress', transfer);
-                        });
-                        return pck.getAppImage()
-                            .then(image => dfuTarget.update(image.initData, image.imageData));
-                    })
-                    .then(() => device.connect());
-            });
+        return pck.load()
+            .then(() => {
+                dfuDevice._manuallyDisconnected = true;
+                device._manuallyDisconnected = true;
+
+                return dfuDevice.setDfuMode();
+            })
+            .then(() => {
+                return this.searchForDfuDevice('DfuTarg')
+            })
+            .then((dfuTarget) => {
+                dfuTarget.on('progress', (transfer) => {
+                    device.emit('update-progress', transfer);
+                });
+                return pck.getAppImage()
+                    .then(image => dfuTarget.update(image.initData, image.imageData));
+            })
+            .then(() => device.connect());
     }
     addDevice(device) {
-        this.devices.set(device.id, device);
-        this.emit('new-device', device);
+        let alreadyAdded = false;
+        this.devices.forEach(dev => {
+            if (dev.device.address === device.device.address) {
+                alreadyAdded = true;
+            }
+        });
+        // Check if the device exists already
+        if (!alreadyAdded) {
+            this.devices.set(device.id, device);
+            this.emit('new-device', device);
+        }
     }
     createDFUDevice(device) {
         return new this.DFU(device.device);
