@@ -284,7 +284,7 @@ const WandMixin = (BLEDevice) => {
                 EULER_POSITION_CHARACTERISTIC,
                 this.onPosition,
             ).then(() => {
-                // Stay subscribed until unsubscribe suceeds
+                // Stay subscribed until unsubscribe succeeds
                 this._eulerSubscribed = false;
             });
         }
@@ -313,7 +313,7 @@ const WandMixin = (BLEDevice) => {
                 TEMPERATURE_CHARACTERISTIC,
                 this.onTemperature,
             ).then(() => {
-                // Stay subscribed until unsubscribe suceeds
+                // Stay subscribed until unsubscribe succeeds
                 this._temperatureSubscribed = false;
             });
         }
@@ -696,7 +696,6 @@ const DFUMixin = (BLEDevice) => {
                     if (end < data.byteLength) {
                         return this.transferData(data, offset, end);
                     }
-                    return null;
                 });
         }
 
@@ -811,7 +810,6 @@ class Devices extends events.EventEmitter {
                                 let wand = new this.Wand(device, this);
                                 this.addDevice(wand);
                                 closestDevice = closestDevice || wand;
-                                console.log('Comparing', closestDevice.device.rssi, wand.device.rssi);
                                 if (closestDevice.device.rssi < wand.device.rssi) {
                                     closestDevice = wand;
                                 }
@@ -822,7 +820,7 @@ class Devices extends events.EventEmitter {
                         return resolve(closestDevice);
                     }, timeout);
                 })
-                .catch(e => console.log("Unable to start the scan", e));
+                .catch(reject);
         });
     }
     stopBluetoothScan() {
@@ -849,15 +847,8 @@ class Devices extends events.EventEmitter {
         const dfuDevice = this.createDFUDevice(device);
         const pck = new Package(this.extractor, buffer);
         return pck.load()
-            .then(() => {
-                dfuDevice._manuallyDisconnected = true;
-                device._manuallyDisconnected = true;
-
-                return dfuDevice.setDfuMode();
-            })
-            .then(() => {
-                return this.searchForDfuDevice('DfuTarg')
-            })
+            .then(() => dfuDevice.setDfuMode())
+            .then(() => this.searchForDfuDevice(dfuDevice.dfuName))
             .then((dfuTarget) => {
                 dfuTarget.on('progress', (transfer) => {
                     device.emit('update-progress', transfer);
