@@ -97,6 +97,11 @@ const BLEDeviceMixin = (Device) => {
         }
         disconnect() {
             this._manuallyDisconnected = true;
+
+            if (this.state == 'disconnected') {
+                return Promise.resolve();
+            }
+
             return BLEDevice.disconnectFromPeripheral(this.device)
                 .then(() => this.onManualDisconnect());
         }
@@ -282,12 +287,12 @@ const BLEDeviceMixin = (Device) => {
                 bluetooth: {
                     name: this.device.advertisement.localName,
                     address: this.device.address,
-                    dfuName: 'DfuTarg',
                     state: this.state,
                 },
             };
         }
         terminate() {
+            this.removeAllListeners();
             return this.disconnect();
         }
         static localUuid(uuid) {

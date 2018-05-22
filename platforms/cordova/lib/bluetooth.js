@@ -99,6 +99,7 @@ class Device extends EventEmitter {
         super();
         this.address = result.address;
         this.name = result.name;
+        this.rssi = result.rssi;
         this.services = new Map();
         this.manager = manager;
         this.discovered = false;

@@ -85,7 +85,29 @@ const BLEDeviceMixin = (Device) => {
                 return Promise.resolve();
             }
             this.setState('connecting');
-            return this.device.connect();
+            return new Promise((resolve, reject) => {
+                if (!this.previouslyConnected) {
+                    this.device.connect()
+                        .then(data => {
+                            this.previouslyConnected = true;
+                            this.setState('connected');
+                            resolve(data);
+                        }, err => {
+                            this.setState('disconnected');
+                            reject(err);
+                        });
+                } else {
+                    this.device.reconnect()
+                        .then(data => {
+                            this.previouslyConnected = true;
+                            this.setState('connected');
+                            resolve(data);
+                        }, err => {
+                            this.setState('disconnected');
+                            reject(err);
+                        });
+                }
+            });
         }
         reconnect() {
             this.setState('reconnecting');
@@ -115,6 +137,7 @@ const BLEDeviceMixin = (Device) => {
         disconnect() {
             this._manuallyDisconnected = true;
             return this.device.disconnect()
+                .then(() => this.setState('disconnected'))
                 .then(() => this.onManualDisconnect());
         }
         write(sId, cId, value) {
@@ -156,7 +179,6 @@ const BLEDeviceMixin = (Device) => {
                 bluetooth: {
                     name: this.device.name,
                     address: this.device.address,
-                    dfuName: 'DfuTarg',
                     state: this.state,
                 },
             };

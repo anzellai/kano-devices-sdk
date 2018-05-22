@@ -10,6 +10,7 @@ class BLEWatcher {
     constructor() {
         this.searches = [];
         this.devices = new Map();
+        this.isScanning = false;
     }
     searchForDevice(testFunc, timeout = 10000) {
         return new Promise((resolve, reject) => {
@@ -30,7 +31,8 @@ class BLEWatcher {
                 return;
             }
             // It wasn't found, add it to the searches and start scanning if it is the first search
-            this.maybeStartScan();
+            this.startScan()
+                .catch(e => console.log("Unable to start scanning ", e));
             this.searches.push(search);
         });
     }
@@ -50,16 +52,33 @@ class BLEWatcher {
         });
         return matched;
     }
-    maybeStartScan() {
-        // Searches already in progress, don't start again
-        if (this.searches.length > 0) {
-            return;
+    getDevices(searchFunction) {
+        const returnDevices = [];
+        this.devices.forEach(device => {
+            if (searchFunction(device)) {
+                returnDevices.push(device);
+            }
+        });
+        return returnDevices;
+    }
+    startScan() {
+        if (this.isScanning) {
+            return Promise.resolve();
         }
-        Bluetooth.setup({ request: true })
+        return Bluetooth.setup({ request: true })
             .then(() => Bluetooth.startScan())
             .then(() => {
+                this.isScanning = true;
                 Bluetooth.on('scan-result', (device) => {
-                    this.devices.set(device.address, device);
+                    // Update the watcher devices list
+                    let auxDevice = this.devices.get(device.address);
+                    if (!auxDevice) {
+                        this.devices.set(device.address, device);
+                    } else {
+                        Object.assign(auxDevice, device);
+                    }
+
+                    // If there's anyone looking for this device, resolve
                     this.searches.forEach((search, index) => {
                         const isMatch = search.test(device);
                         if (!isMatch) {
@@ -67,18 +86,17 @@ class BLEWatcher {
                         }
                         clearTimeout(search.to);
                         this.searches.splice(index, 1);
-                        this.maybeStopScan()
-                            .then(() => search.resolve(device))
-                            .catch(e => search.reject(e));
+                        search.resolve(this.devices.get(device.address));
                     });
                 });
             });
     }
-    maybeStopScan() {
-        if (this.searches.length) {
+    stopScan() {
+        if (!this.isScanning) {
             return Promise.resolve();
         }
-        return Bluetooth.stopScan();
+        return Bluetooth.stopScan()
+            .then(() => this.isScanning = false);
     }
 }
 
