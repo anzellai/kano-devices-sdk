@@ -574,11 +574,7 @@ const DFUMixin = (BLEDevice) => {
         setDfuMode() {
             return new Promise((resolve, reject) => {
                 this.on('disconnect', () => resolve());
-                const onResponse = (response) => {
-                    DFU.handleResponse(response.buffer).catch(reject);
-                };
-                this.subscribe(DFU_SERVICE, BUTTON_UUID, onResponse)
-                    .then(() => new Promise(r => setTimeout(r, 100)))
+                Promise.resolve()
                     .then(() => {
                         let auxAddress = this.device.address.substr(this.device.address.length - 5).replace(':', '-');
                         this.dfuName = `DFU-${auxAddress}`;
@@ -898,6 +894,7 @@ class SubscriptionsManager {
             unsubscribe() { return Promise.resolve(); },
         }, opts);
         this.subscriptions = new Map();
+        this.subscriptionsCallbacks = {};
     }
 
     static getSubscriptionKey(sId, cId) {
@@ -939,9 +936,11 @@ class SubscriptionsManager {
         const subscriptions = this.subscriptions.get(key);
         if (!subscriptions.subscribed) {
             subscriptions.subscribed = true;
-            return this._subscribe(sId, cId, (value) => {
+            this.subscriptionsCallbacks[`${sId}-${cId}`] = (value) => {
+                value = new Uint8Array(value);
                 subscriptions.callbacks.forEach(callback => callback(value));
-            });
+            };
+            return this._subscribe(sId, cId, this.subscriptionsCallbacks[`${sId}-${cId}`]);
         }
         return Promise.resolve();
     }
@@ -956,18 +955,18 @@ class SubscriptionsManager {
     }
     maybeUnsubscribe(sId, cId) {
         const key = SubscriptionsManager.getSubscriptionKey(sId, cId);
-        const subscriptions = this.subscriptions.get(key);
-        if (subscriptions.subscribed) {
-            subscriptions.subscribed = false;
-            this._unsubscribe(sId, cId);
+        const subscription = this.subscriptions.get(key);
+        if (subscription.subscribed) {
+            subscription.subscribed = false;
+            this._unsubscribe(sId, cId, this.subscriptionsCallbacks[`${sId}-${cId}`]);
         }
         return Promise.resolve();
     }
     _subscribe(sId, cId, callback) {
         return this.options.subscribe(sId, cId, callback);
     }
-    _unsubscribe(sId, cId) {
-        return this.options.unsubscribe(sId, cId);
+    _unsubscribe(sId, cId, callback) {
+        return this.options.unsubscribe(sId, cId, callback);
     }
 }
 

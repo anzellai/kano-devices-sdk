@@ -260,12 +260,12 @@ const BLEDeviceMixin = (Device) => {
             });
         }
         static subscribe(char, valueCallback) {
-            char.on('data', b => valueCallback(new Uint8Array(b)));
             return new Promise((resolve, reject) => {
                 char.subscribe((err) => {
                     if (err) {
                         return reject(err);
                     }
+                    char.on('data', valueCallback);
                     return resolve();
                 });
             });
