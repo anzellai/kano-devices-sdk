@@ -163,9 +163,9 @@ const BLEDeviceMixin = (Device) => {
             const char = this.getCharacteristic(sId, cId);
             return BLEDevice.subscribe(char, callback);
         }
-        _unsubscribe(sId, cId) {
+        _unsubscribe(sId, cId, callback) {
             const char = this.getCharacteristic(sId, cId);
-            return BLEDevice.unsubscribe(char);
+            return BLEDevice.unsubscribe(char, callback);
         }
         write(sId, cId, value) {
             return this.setup()
@@ -260,22 +260,23 @@ const BLEDeviceMixin = (Device) => {
             });
         }
         static subscribe(char, valueCallback) {
-            char.on('data', b => valueCallback(new Uint8Array(b)));
             return new Promise((resolve, reject) => {
                 char.subscribe((err) => {
                     if (err) {
                         return reject(err);
                     }
+                    char.on('data', valueCallback);
                     return resolve();
                 });
             });
         }
-        static unsubscribe(char) {
+        static unsubscribe(char, callback) {
             return new Promise((resolve, reject) => {
                 char.unsubscribe((err) => {
                     if (err) {
                         return reject(err);
                     }
+                    char.removeListener('data', callback);
                     return resolve();
                 });
             });
