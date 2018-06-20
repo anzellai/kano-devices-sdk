@@ -266,7 +266,6 @@ const BLEDeviceMixin = (Device) => {
                         return reject(err);
                     }
                     char.on('data', valueCallback);
-                    console.log('subscribe', char.listeners().length);
                     return resolve();
                 });
             });

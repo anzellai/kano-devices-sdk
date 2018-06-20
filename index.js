@@ -3,7 +3,6 @@
 Object.defineProperty(exports, '__esModule', { value: true });
 
 var events = require('events');
-var timers = require('core-js/library/web/timers');
 
 class Package {
     constructor(extractor, buffer) {
@@ -619,7 +618,7 @@ const DFUMixin = (BLEDevice) => {
                             new Buffer(this.dfuName)
                         );
                     })
-                    .then(() => new Promise(r => timers.setTimeout(r, 100)))
+                    .then(() => new Promise(r => setTimeout(r, 100)))
                     .then(() => this.sendOperation(BUTTON_UUID, OPERATIONS.BUTTON_COMMAND))
                     .catch(reject);
             });
@@ -715,13 +714,6 @@ const DFUMixin = (BLEDevice) => {
                         return this.sendControl(OPERATIONS.EXECUTE);
                     }
 
-                    // Does the counter automatically restart when we ask for the CRC?
-
-                    // The counter resets:
-                    // on CREATE OBJECT
-                    // on SET RECEIPT
-                    // on counter == 0 
-
                     return Promise.resolve();
                 })
                 .then(() => {
@@ -740,45 +732,35 @@ const DFUMixin = (BLEDevice) => {
             return this.writePacket(packet)
                 .then(() => {
                     this.packetsWritten += 1;
-                    console.log('packets written: ', this.packetsWritten);
 
                     this.progress(offset + end);
 
                     if (end < data.byteLength) {
                         return Promise.resolve()
                             .then(() => {
-                                if (this.packetsWritten >= RECEIPT_NOTIFICATION_PACKETS) {
-                                    return new Promise((resolve, reject) => {
-                                        // If we already received the CRC, we're safe to continue
-                                        if (this.receivedCRC) {
-                                            resolve();
-                                        }
-
-                                        let waitForCRC = setInterval(() => {
-                                            if (this.receivedCRC) {
-                                                resolve();
-                                                clearInterval(waitForCRC);
-                                            }
-                                        }, 3);
-                                    })
-                                    .then(() => {
-                                        this.receivedCRC = false;
-                                        this.packetsWritten = 0;
-
-                                        console.log('The CRC is good, continue!');
-                                    });
-                                } else {
+                                if (this.packetsWritten < RECEIPT_NOTIFICATION_PACKETS) {
                                     return Promise.resolve();
                                 }
+                                
+                                return new Promise((resolve, reject) => {
+                                    // If we already received the CRC, we're safe to continue
+                                    if (this.receivedCRC) {
+                                        resolve();
+                                    }
 
-                                // // I was mistaking the response from the SET_RECEIPT_NOTIFICATION with the actual notification.
-                                // // We shall see the multiple responses (as a CRC) in the logs now.
-                                // return Promise.resolve();
+                                    let waitForCRC = setInterval(() => {
+                                        if (this.receivedCRC) {
+                                            resolve();
+                                            clearInterval(waitForCRC);
+                                        }
+                                    }, 3);
+                                })
+                                .then(() => {
+                                    this.receivedCRC = false;
+                                    this.packetsWritten = 0;
+                                });
                             })
-                            .then(() => {
-                            //     clearTimeout(this.waitForReceiptTimeout);
-                                return this.transferData(data, offset, end);
-                            });
+                            .then(() => this.transferData(data, offset, end));
                     }
                 });
         }
@@ -788,7 +770,6 @@ const DFUMixin = (BLEDevice) => {
         }
 
         sendControl(operation, buffer) {
-            console.log(`send control: ${operation}`);
             return this.sendOperation(CONTROL_UUID, operation, buffer);
         }
 
@@ -827,29 +808,21 @@ const DFUMixin = (BLEDevice) => {
                 throw new Error('Firmware not specified');
             }
             return this.subscribe(DFU_SERVICE, CONTROL_UUID, response => {
-                // console.log('>something>  ', response.buffer);
-                // && !this.ignoreReceipt
-
-                if (response[0] == 96 && response[1] == 3) { // We probably want a better way to check if this is a CRC response. The receipt is actually a CRC 
-                    console.log('ignore receipt ', !this.ignoreReceipt, response);
+                // The receipt notification is a CRC response.
+                if (response[0] == 96 && response[1] == 3) {
                     if (!this.ignoreReceipt) {
-                        console.log("Received the 20 bytes receipt", this.packetsWritten);
                         this.receivedCRC = true;
                     }
                 }
             })
                 .then(() => {
                     return new Promise((resolve, reject) => {
-                        console.log('Enable the receipt notifications');
-
+                        // Enable the receipt notification
                         let value = new Buffer(2);
                         value.writeUInt16LE(RECEIPT_NOTIFICATION_PACKETS, 0);
 
                         this.sendControl(OPERATIONS.RECEIPT_NOTIFICATIONS, value)
-                            .then(response => {
-                                console.log('successfully sent the receipt');
-                                resolve();
-                            });
+                            .then(resolve);
                     })
                 })
                 .then(() => this.transferInit(init))
@@ -1071,8 +1044,6 @@ class SubscriptionsManager {
         const key = SubscriptionsManager.getSubscriptionKey(sId, cId);
         const subscription = this.subscriptions.get(key);
 
-        // We truly unsubscribe only when we don't have any subscribers
-        // waiting for data.
         if (subscription.subscribed && subscription.callbacks.length <= 0) {
             subscription.subscribed = false;
             this._unsubscribe(sId, cId, this.subscriptionsCallbacks[key]);
