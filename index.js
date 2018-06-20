@@ -3,6 +3,7 @@
 Object.defineProperty(exports, '__esModule', { value: true });
 
 var events = require('events');
+var timers = require('core-js/library/web/timers');
 
 class Package {
     constructor(extractor, buffer) {
@@ -104,7 +105,6 @@ const WandMixin = (BLEDevice) => {
     const TEMPERATURE_CHARACTERISTIC = BLEDevice.localUuid('64A70014-F691-4B93-A6F4-0968F5B648F8');
 
 
-
     /**
      * Emits: position, temperature, battery-status, user-button, sleep
      */
@@ -114,6 +114,7 @@ const WandMixin = (BLEDevice) => {
             this.type = 'wand';
             this._eulerSubscribed = false;
             this._temperatureSubscribed = false;
+            this._buttonSubscribed = false;
             this.onUserButton = this.onUserButton.bind(this);
             this.onPosition = this.onPosition.bind(this);
             this.onSleepStatus = this.onSleepStatus.bind(this);
@@ -210,19 +211,49 @@ const WandMixin = (BLEDevice) => {
                 [1],
             );
         }
+        subscribePosition() {
+            if (this._eulerSubscribed) {
+                return Promise.resolve();
+            }
+            // Synchronous state change. Multiple calls to subscribe will stop after the first
+            this._eulerSubscribed = true;
+            return this.subscribe(
+                EULER_POSITION_SERVICE,
+                EULER_POSITION_CHARACTERISTIC,
+                this.onPosition,
+            ).catch((e) => {
+                // Revert state if failed to subscribe
+                this._eulerSubscribed = false;
+                throw e;
+            });
+        }
         subscribeButton() {
+            if (this._buttonSubscribed) {
+                return Promise.resolve();
+            }
+            // Synchronous state change. Multiple calls to subscribe will stop after the first
+            this._buttonSubscribed = true;
             return this.subscribe(
                 IO_SERVICE,
                 BUTTON_CHARACTERISTIC,
                 this.onUserButton,
-            );
+            ).catch((e) => {
+                // Revert state if failed to subscribe
+                this._buttonSubscribed = false;
+                throw e;
+            });
         }
         unsubscribeButton() {
+            if (!this._buttonSubscribed) {
+                return Promise.resolve();
+            }
             return this.unsubscribe(
                 IO_SERVICE,
                 BUTTON_CHARACTERISTIC,
-                this.onUserButton,
-            );
+            ).then(() => {
+                // Stay subscribed until unsubscribe suceeds
+                this._buttonSubscribed = false;
+            });
         }
         getButtonStatus() {
             return this.read(IO_SERVICE, BUTTON_CHARACTERISTIC)
@@ -484,7 +515,7 @@ const OPERATIONS = {
     CREATE_COMMAND: [0x01, 0x01],
     CREATE_DATA: [0x01, 0x02],
     RECEIPT_NOTIFICATIONS: [0x02],
-    CACULATE_CHECKSUM: [0x03],
+    CALCULATE_CHECKSUM: [0x03],
     EXECUTE: [0x04],
     SELECT_COMMAND: [0x06, 0x01],
     SELECT_DATA: [0x06, 0x02],
@@ -558,6 +589,8 @@ const DFUMixin = (BLEDevice) => {
     const PACKET_UUID = BLEDevice.localUuid('8ec90002-f315-4f60-9fb8-838830daea50');
     const BUTTON_UUID = BLEDevice.localUuid('8ec90003-f315-4f60-9fb8-838830daea50');
 
+    const RECEIPT_NOTIFICATION_PACKETS = 20;
+
     /**
      * Emits: position, battery-status, user-button, sleep
      */
@@ -569,6 +602,8 @@ const DFUMixin = (BLEDevice) => {
                 type: 'none',
                 totalBytes: 0,
             };
+
+            this.packetsWritten = 0;
         }
 
         setDfuMode() {
@@ -584,7 +619,7 @@ const DFUMixin = (BLEDevice) => {
                             new Buffer(this.dfuName)
                         );
                     })
-                    .then(() => new Promise(r => setTimeout(r, 100)))
+                    .then(() => new Promise(r => timers.setTimeout(r, 100)))
                     .then(() => this.sendOperation(BUTTON_UUID, OPERATIONS.BUTTON_COMMAND))
                     .catch(reject);
             });
@@ -659,18 +694,34 @@ const DFUMixin = (BLEDevice) => {
             return this.sendControl(createType, view.buffer)
                 .then(() => {
                     const data = buffer.slice(start, end);
+                    
+                    // Reset the packets written after you send the CREATE
+                    this.packetsWritten = 0;
+
                     return this.transferData(data, start);
                 })
-                .then(() => this.sendControl(OPERATIONS.CACULATE_CHECKSUM))
+                .then(() => {
+                    this.ignoreReceipt = true;
+                    return this.sendControl(OPERATIONS.CALCULATE_CHECKSUM)
+                })
                 .then((response) => {
                     const crc = response.getInt32(4, LITTLE_ENDIAN);
                     const transferred = response.getUint32(0, LITTLE_ENDIAN);
                     const data = buffer.slice(0, transferred);
 
+                    this.ignoreReceipt = false;
                     if (DFU.checkCrc(data, crc)) {
                         offset = transferred;
                         return this.sendControl(OPERATIONS.EXECUTE);
                     }
+
+                    // Does the counter automatically restart when we ask for the CRC?
+
+                    // The counter resets:
+                    // on CREATE OBJECT
+                    // on SET RECEIPT
+                    // on counter == 0 
+
                     return Promise.resolve();
                 })
                 .then(() => {
@@ -688,10 +739,46 @@ const DFUMixin = (BLEDevice) => {
 
             return this.writePacket(packet)
                 .then(() => {
+                    this.packetsWritten += 1;
+                    console.log('packets written: ', this.packetsWritten);
+
                     this.progress(offset + end);
 
                     if (end < data.byteLength) {
-                        return this.transferData(data, offset, end);
+                        return Promise.resolve()
+                            .then(() => {
+                                if (this.packetsWritten >= RECEIPT_NOTIFICATION_PACKETS) {
+                                    return new Promise((resolve, reject) => {
+                                        // If we already received the CRC, we're safe to continue
+                                        if (this.receivedCRC) {
+                                            resolve();
+                                        }
+
+                                        let waitForCRC = setInterval(() => {
+                                            if (this.receivedCRC) {
+                                                resolve();
+                                                clearInterval(waitForCRC);
+                                            }
+                                        }, 3);
+                                    })
+                                    .then(() => {
+                                        this.receivedCRC = false;
+                                        this.packetsWritten = 0;
+
+                                        console.log('The CRC is good, continue!');
+                                    });
+                                } else {
+                                    return Promise.resolve();
+                                }
+
+                                // // I was mistaking the response from the SET_RECEIPT_NOTIFICATION with the actual notification.
+                                // // We shall see the multiple responses (as a CRC) in the logs now.
+                                // return Promise.resolve();
+                            })
+                            .then(() => {
+                            //     clearTimeout(this.waitForReceiptTimeout);
+                                return this.transferData(data, offset, end);
+                            });
                     }
                 });
         }
@@ -701,6 +788,7 @@ const DFUMixin = (BLEDevice) => {
         }
 
         sendControl(operation, buffer) {
+            console.log(`send control: ${operation}`);
             return this.sendOperation(CONTROL_UUID, operation, buffer);
         }
 
@@ -738,7 +826,33 @@ const DFUMixin = (BLEDevice) => {
             if (!firmware) {
                 throw new Error('Firmware not specified');
             }
-            return this.transferInit(init)
+            return this.subscribe(DFU_SERVICE, CONTROL_UUID, response => {
+                // console.log('>something>  ', response.buffer);
+                // && !this.ignoreReceipt
+
+                if (response[0] == 96 && response[1] == 3) { // We probably want a better way to check if this is a CRC response. The receipt is actually a CRC 
+                    console.log('ignore receipt ', !this.ignoreReceipt, response);
+                    if (!this.ignoreReceipt) {
+                        console.log("Received the 20 bytes receipt", this.packetsWritten);
+                        this.receivedCRC = true;
+                    }
+                }
+            })
+                .then(() => {
+                    return new Promise((resolve, reject) => {
+                        console.log('Enable the receipt notifications');
+
+                        let value = new Buffer(2);
+                        value.writeUInt16LE(RECEIPT_NOTIFICATION_PACKETS, 0);
+
+                        this.sendControl(OPERATIONS.RECEIPT_NOTIFICATIONS, value)
+                            .then(response => {
+                                console.log('successfully sent the receipt');
+                                resolve();
+                            });
+                    })
+                })
+                .then(() => this.transferInit(init))
                 .then(() => this.transferFirmware(firmware));
         }
     }
@@ -956,7 +1070,10 @@ class SubscriptionsManager {
     maybeUnsubscribe(sId, cId) {
         const key = SubscriptionsManager.getSubscriptionKey(sId, cId);
         const subscription = this.subscriptions.get(key);
-        if (subscription.subscribed) {
+
+        // We truly unsubscribe only when we don't have any subscribers
+        // waiting for data.
+        if (subscription.subscribed && subscription.callbacks.length <= 0) {
             subscription.subscribed = false;
             this._unsubscribe(sId, cId, this.subscriptionsCallbacks[key]);
         }
