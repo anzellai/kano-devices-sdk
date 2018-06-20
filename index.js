@@ -113,7 +113,6 @@ const WandMixin = (BLEDevice) => {
             this.type = 'wand';
             this._eulerSubscribed = false;
             this._temperatureSubscribed = false;
-            this._buttonSubscribed = false;
             this.onUserButton = this.onUserButton.bind(this);
             this.onPosition = this.onPosition.bind(this);
             this.onSleepStatus = this.onSleepStatus.bind(this);
@@ -210,49 +209,18 @@ const WandMixin = (BLEDevice) => {
                 [1],
             );
         }
-        subscribePosition() {
-            if (this._eulerSubscribed) {
-                return Promise.resolve();
-            }
-            // Synchronous state change. Multiple calls to subscribe will stop after the first
-            this._eulerSubscribed = true;
-            return this.subscribe(
-                EULER_POSITION_SERVICE,
-                EULER_POSITION_CHARACTERISTIC,
-                this.onPosition,
-            ).catch((e) => {
-                // Revert state if failed to subscribe
-                this._eulerSubscribed = false;
-                throw e;
-            });
-        }
         subscribeButton() {
-            if (this._buttonSubscribed) {
-                return Promise.resolve();
-            }
-            // Synchronous state change. Multiple calls to subscribe will stop after the first
-            this._buttonSubscribed = true;
             return this.subscribe(
                 IO_SERVICE,
                 BUTTON_CHARACTERISTIC,
                 this.onUserButton,
-            ).catch((e) => {
-                // Revert state if failed to subscribe
-                this._buttonSubscribed = false;
-                throw e;
-            });
+            );
         }
         unsubscribeButton() {
-            if (!this._buttonSubscribed) {
-                return Promise.resolve();
-            }
             return this.unsubscribe(
                 IO_SERVICE,
                 BUTTON_CHARACTERISTIC,
-            ).then(() => {
-                // Stay subscribed until unsubscribe suceeds
-                this._buttonSubscribed = false;
-            });
+            );
         }
         getButtonStatus() {
             return this.read(IO_SERVICE, BUTTON_CHARACTERISTIC)
@@ -741,7 +709,7 @@ const DFUMixin = (BLEDevice) => {
                                 if (this.packetsWritten < RECEIPT_NOTIFICATION_PACKETS) {
                                     return Promise.resolve();
                                 }
-                                
+
                                 return new Promise((resolve, reject) => {
                                     // If we already received the CRC, we're safe to continue
                                     if (this.receivedCRC) {
@@ -753,7 +721,7 @@ const DFUMixin = (BLEDevice) => {
                                             resolve();
                                             clearInterval(waitForCRC);
                                         }
-                                    }, 3);
+                                    }, 5);
                                 })
                                 .then(() => {
                                     this.receivedCRC = false;
