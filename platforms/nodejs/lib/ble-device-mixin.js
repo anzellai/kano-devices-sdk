@@ -22,13 +22,14 @@ const BLEDeviceMixin = (Device) => {
             });
             // Reset providing the device handle found
             this.reset(device);
+            
+            this.device.on('disconnect', this.onDisconnect);
         }
         reset(device) {
             this.device = device;
             this.serviceCache = new Map();
             this.charCache = new Map();
             this._setupPromise = null;
-            this.device.on('disconnect', this.onDisconnect);
             this.state = 'disconnected';
         }
         setState(state) {
