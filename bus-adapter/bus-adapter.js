@@ -77,7 +77,7 @@ class BusAdapter {
             });
         });
         this.bus.on('start-bluetooth-scan', (message) => {
-            this.Devices.startBluetoothScan()
+            this.Devices.getClosestDevice()
                 .catch(() => {})
                 .then(() => {
                     this.bus.emit('bluetooth-scan-end', {
