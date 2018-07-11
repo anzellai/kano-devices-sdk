@@ -898,33 +898,6 @@ class Devices extends events.EventEmitter {
                 return Promise.resolve(this.wand);
             });
     }
-    getClosestWand(timeout) {
-        if (this.bluetoothDisabled) {
-            return Promise.resolve();
-        }
-        return new Promise((resolve, reject) => {
-            this.watcher.startScan()
-                .then(() => {
-                    setTimeout(() => {
-                        let closestDevice = undefined;
-                        this.watcher.getDevices(this.wandTestFunction.bind(this))
-                            .forEach(device => {
-                                let wand = new this.Wand(device, this);
-                                this.addDevice(wand);
-                                closestDevice = closestDevice || wand;
-                                if (closestDevice.device.rssi < wand.device.rssi) {
-                                    closestDevice = wand;
-                                }
-                            });
-                        if (!closestDevice) {
-                            return reject();
-                        }
-                        return resolve(closestDevice);
-                    }, timeout);
-                })
-                .catch(reject);
-        });
-    }
     stopBluetoothScan() {
         if (this.bluetoothDisabled) {
             return Promise.resolve();

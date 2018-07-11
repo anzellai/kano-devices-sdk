@@ -61,6 +61,28 @@ class BLEWatcher {
         });
         return returnDevices;
     }
+    getClosestDevice(testFunc, timeout=3000) {
+        return new Promise((resolve, reject) => {
+            this.startScan()
+                .then(() => {
+                    setTimeout(() => {
+                        let closestDevice = undefined;
+                        this.watcher.getDevices(testFunc)
+                            .forEach(device => {
+                                closestDevice = closestDevice || wand;
+                                if (!closestDevice || (closestDevice.rssi < device.rssi)) {
+                                    closestDevice = device;
+                                }
+                            });
+                        if (!closestDevice) {
+                            return reject(new Error(`No devices have been found after ${timeout}ms.`));
+                        }
+                        return resolve(closestDevice);
+                    }, timeout);
+                })
+                .catch(reject);
+        });
+    }
     startScan() {
         if (this.isScanning) {
             return Promise.resolve();
