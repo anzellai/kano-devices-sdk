@@ -65,6 +65,10 @@ class NobleWatcherBase extends EventEmitter {
         }
         this.cache[peripheral.address] = peripheral;
     }
+
+    uncacheDevice(deviceAddress) {
+        this.cache[deviceAddress] = null;
+    }
 }
 
 module.exports = NobleWatcherBase;
