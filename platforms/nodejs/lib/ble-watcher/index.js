@@ -50,6 +50,43 @@ class BLEWatcher extends EventEmitter {
     uncacheDevice(deviceAddress) {
         this.watcher.uncacheDevice(deviceAddress);
     }
+
+    getClosestDevice(testFunc, timeout=3000) {
+        return new Promise((resolve, reject) => {
+            let devicesFound = new Map();
+
+            const onDiscover = (peripheral) => {
+                if (!testFunc(peripheral)) {
+                    return;
+                }
+
+                // Update the device
+                devicesFound.set(peripheral.id, peripheral);
+            };
+
+            this.watcher.on('discover', onDiscover);
+            this.watcher.start();
+
+            setTimeout(() => {
+                this.watcher.removeListener('discover', onDiscover);
+                this.watcher.stop();
+
+                if (devicesFound.size <= 0) {
+                    return reject(new Error(`No devices have been found after ${timeout}ms.`));
+                }
+
+                // Search for the biggest signal
+                let aux = [null, null];
+                devicesFound.forEach((value, key) => {
+                    if (!aux[0] || value.rssi > aux[1]) {
+                        aux = [value.id, value.rssi];
+                    }
+                });
+
+                resolve(devicesFound.get(aux[0]));
+            }, timeout);
+        });
+    }
 }
 
 module.exports = BLEWatcher;

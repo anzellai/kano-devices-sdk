@@ -55,7 +55,8 @@ class NobleWatcherBase extends EventEmitter {
     }
 
     _startScanning() {
-        this.adapter.startScanning();
+        // allow duplicates from the adapter to get rssi updates.
+        this.adapter.startScanning([], true);
         instances += 1;
     }
 
