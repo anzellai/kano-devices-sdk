@@ -46,6 +46,10 @@ class BLEWatcher extends EventEmitter {
             this.watcher.start();
         });
     }
+
+    uncacheDevice(deviceAddress) {
+        this.watcher.uncacheDevice(deviceAddress);
+    }
 }
 
 module.exports = BLEWatcher;

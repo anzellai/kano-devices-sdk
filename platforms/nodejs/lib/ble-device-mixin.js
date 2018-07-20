@@ -68,6 +68,7 @@ const BLEDeviceMixin = (Device) => {
             // Clean the services/characteristics map
             this.serviceCache = new Map();
             this.charCache = new Map();
+            this.watcher.uncacheDevice(this.device.address);
             if (!this._manuallyDisconnected) {
                 this.reconnect();
             } else {
