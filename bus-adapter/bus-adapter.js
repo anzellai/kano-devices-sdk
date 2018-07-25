@@ -76,17 +76,6 @@ class BusAdapter {
                 data: devicesData,
             });
         });
-        this.bus.on('start-bluetooth-scan', (message) => {
-            this.Devices.getClosestDevice()
-                .catch(() => {})
-                .then(() => {
-                    this.bus.emit('bluetooth-scan-end', {
-                        eventId: message.eventId,
-                        error: null,
-                        data: null,
-                    });
-                });
-        });
         this.bus.on('request', (message) => {
             const device = this.Devices.getById(message.data.deviceId);
             if (!device) {

@@ -61,7 +61,7 @@ class BLEWatcher {
         });
         return returnDevices;
     }
-    getClosestDevice(testFunc, timeout=3000) {
+    searchForClosestDevice(testFunc, timeout=3000) {
         return new Promise((resolve, reject) => {
             this.startScan()
                 .then(() => {

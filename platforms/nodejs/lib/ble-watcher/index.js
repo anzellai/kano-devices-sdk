@@ -51,7 +51,7 @@ class BLEWatcher extends EventEmitter {
         this.watcher.uncacheDevice(deviceAddress);
     }
 
-    getClosestDevice(testFunc, timeout=3000) {
+    searchForClosestDevice(testFunc, timeout=3000) {
         return new Promise((resolve, reject) => {
             let devicesFound = new Map();
 
