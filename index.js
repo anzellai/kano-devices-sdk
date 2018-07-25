@@ -397,7 +397,7 @@ const WandMixin = (BLEDevice) => {
             const x = Wand.uInt8ToUInt16(r[2], r[3]);
             const y = Wand.uInt8ToUInt16(r[4], r[5]);
             const z = Wand.uInt8ToUInt16(r[6], r[7]);
-            this.emit('position', [x, y, z, w]);
+            this.emit('position', [w, x, y, z]);
         }
         onTemperature(temperature) {
             let auxTemperature = Wand.uInt8ToUInt16(temperature[0], temperature[1]);
