@@ -17,7 +17,7 @@ class ElectronIpcBusRenderer {
     removeListener(name, callback) {
         const cb = this.listeners.get(callback);
         this.listeners.delete(callback);
-        this.ipc.removeListener(cb);
+        this.ipc.removeListener(name, cb);
     }
 }
 
