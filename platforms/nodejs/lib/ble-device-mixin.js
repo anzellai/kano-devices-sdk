@@ -283,6 +283,9 @@ const BLEDeviceMixin = (Device) => {
                 });
             });
         }
+        getAdvertisementName() {
+            return this.device.advertisement.localName;
+        }
         toJSON() {
             return {
                 id: this.id,

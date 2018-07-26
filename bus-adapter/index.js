@@ -155,6 +155,9 @@ class WandAdapter extends DeviceAdapter {
         case 'reset-quaternions': {
             return device.resetQuaternions().then(() => null);
         }
+        case 'name': {
+            return device.getAdvertisementName();
+        }
         default: {
             return null;
         }

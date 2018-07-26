@@ -172,6 +172,9 @@ const BLEDeviceMixin = (Device) => {
             const service = this.device.services.get(sId);
             return service.characteristics.get(cId);
         }
+        getAdvertisementName() {
+            return this.device.name;
+        }
         toJSON() {
             return {
                 id: this.id,
