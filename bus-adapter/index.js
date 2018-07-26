@@ -193,21 +193,25 @@ class BusAdapter {
             data: { deviceId, value },
         };
     }
+    static getAdapterForDevice(device) {
+        let adapter;
+        for (let i = 0; i < DEVICE_ADAPTERS.length; i += 1) {
+            adapter = DEVICE_ADAPTERS[i];
+            if (adapter.test(device)) {
+                break;
+            }
+        }
+        if (!adapter) {
+            throw new Error(`No adapter found for device '${device.type}'`);
+        }
+        return adapter;
+    }
     reply(message, value = null) {
         this.bus.emit('response', BusAdapter.buildResponse(message, value));
     }
     setupDiscovery() {
         this.Devices.on('new-device', (device) => {
-            let adapter;
-            for (let i = 0; i < DEVICE_ADAPTERS.length; i += 1) {
-                adapter = DEVICE_ADAPTERS[i];
-                if (adapter.test(device)) {
-                    break;
-                }
-            }
-            if (!adapter) {
-                throw new Error(`No adapter found for device '${device.type}'`);
-            }
+            const adapter = BusAdapter.getAdapterForDevice(device);
             adapter.onDiscover(device, this);
             this.bus.emit('device-available', {
                 eventId: 0,
@@ -241,6 +245,30 @@ class BusAdapter {
                 error: null,
                 data: devicesData,
             });
+        });
+        this.bus.on('search-for-closest-device', (message) => {
+            this.Devices.searchForClosestDevice(message.data.deviceType, message.data.timeout)
+                .then((device) => {
+                    const adapter = BusAdapter.getAdapterForDevice(device);
+                    adapter.onDiscover(device, this);
+                    this.bus.emit('search-for-closest-device-response', {
+                        eventId: message.eventId,
+                        error: null,
+                        data: adapter.getDeviceSetupInfo(device),
+                    });
+                });
+        });
+        this.bus.on('search-for-device', (message) => {
+            this.Devices.searchForClosestDevice(message.data.prefix, message.data.timeout)
+                .then((device) => {
+                    const adapter = BusAdapter.getAdapterForDevice(device);
+                    adapter.onDiscover(device, this);
+                    this.bus.emit('search-for-device-response', {
+                        eventId: message.eventId,
+                        error: null,
+                        data: adapter.getDeviceSetupInfo(device),
+                    });
+                });
         });
         this.bus.on('request', (message) => {
             const device = this.Devices.getById(message.data.deviceId);
