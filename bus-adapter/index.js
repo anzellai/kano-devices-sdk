@@ -272,7 +272,7 @@ class BusAdapter {
                 });
         });
         this.bus.on('search-for-device', (message) => {
-            this.Devices.searchForClosestDevice(message.data.prefix, message.data.timeout)
+            this.Devices.searchForDevice(message.data.prefix, message.data.timeout)
                 .then((device) => {
                     const adapter = BusAdapter.getAdapterForDevice(device);
                     adapter.onDiscover(device, this);
