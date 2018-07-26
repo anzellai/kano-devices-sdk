@@ -137,7 +137,7 @@ class WandAdapter extends DeviceAdapter {
             return device.resetQuaternions().then(() => null);
         }
         case 'name': {
-            return device.getAdvertisementName();
+            return Promise.resolve(device.getAdvertisementName());
         }
         default: {
             return null;

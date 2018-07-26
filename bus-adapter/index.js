@@ -156,7 +156,7 @@ class WandAdapter extends DeviceAdapter {
             return device.resetQuaternions().then(() => null);
         }
         case 'name': {
-            return device.getAdvertisementName();
+            return Promise.resolve(device.getAdvertisementName());
         }
         default: {
             return null;
@@ -259,6 +259,16 @@ class BusAdapter {
                         error: null,
                         data: adapter.getDeviceSetupInfo(device),
                     });
+                })
+                .catch((e) => {
+                    this.bus.emit('search-for-closest-device-response', {
+                        eventId: message.eventId,
+                        error: {
+                            message: e.message,
+                            stack: e.stack,
+                            name: e.name,
+                        },
+                    });
                 });
         });
         this.bus.on('search-for-device', (message) => {
@@ -270,6 +280,16 @@ class BusAdapter {
                         eventId: message.eventId,
                         error: null,
                         data: adapter.getDeviceSetupInfo(device),
+                    });
+                })
+                .catch((e) => {
+                    this.bus.emit('search-for-device-response', {
+                        eventId: message.eventId,
+                        error: {
+                            message: e.message,
+                            stack: e.stack,
+                            name: e.name,
+                        },
                     });
                 });
         });
