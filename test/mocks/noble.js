@@ -33,15 +33,21 @@ class Noble extends EventEmitter {
 
         this.emittedDevices = [];
 
-        this.emit('stateChange', 'poweredOn');
-
-        setInterval(() => {
+        this.state = 'poweredOn';
+    }
+    
+    startScanning() {
+        this.scannerInterval = setInterval(() => {
             let nameGenerator = devicesPrefixes[parseInt(devicesPrefixes.length * Math.random())];
 
             this.emittedDevices.push(new BLEDevice(nameGenerator()));
             this.emit('discover', this.emittedDevices[this.emittedDevices.length - 1]);
         }, parseInt(200 * Math.random()));
-	}
+    }
+
+    stopScanning() {
+        clearInterval(this.scannerInterval);
+    }
 }
 
 module.exports = Noble;

@@ -906,7 +906,7 @@ class Devices extends events.EventEmitter {
             });
     }
     getDeviceID(deviceName) {
-        if (deviceName.startsWith(WAND_PREFIX)) {
+        if (deviceName && deviceName.startsWith(WAND_PREFIX)) {
             return WAND_ID;
         }
         // Add more devices here
