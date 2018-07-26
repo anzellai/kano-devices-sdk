@@ -1,0 +1,47 @@
+const { EventEmitter } = require('events');
+
+let DeviceID = 0;
+
+let devicesPrefixes = [
+    generateWandName,
+    generateWrongName
+];
+
+function generateWrongName() {
+    return null;
+}
+
+function generateWandName(prefix) {
+    return `Kano-Wand-${parseInt(100 * Math.random())}-${parseInt(100 * Math.random())}-${parseInt(100 * Math.random())}`;
+}
+
+class BLEDevice extends EventEmitter {
+    constructor(name) {
+        super();
+
+        this.id = DeviceID++;
+        this.advertisement = {
+            localName: name,
+            rssi: (-1 * parseInt(100 * Math.random()))
+        };
+    }
+}
+
+class Noble extends EventEmitter {
+	constructor(deviceClass) {
+        super();
+
+        this.emittedDevices = [];
+
+        this.emit('stateChange', 'poweredOn');
+
+        setInterval(() => {
+            let nameGenerator = devicesPrefixes[parseInt(devicesPrefixes.length * Math.random())];
+
+            this.emittedDevices.push(new BLEDevice(nameGenerator()));
+            this.emit('discover', this.emittedDevices[this.emittedDevices.length - 1]);
+        }, parseInt(200 * Math.random()));
+	}
+}
+
+module.exports = Noble;
