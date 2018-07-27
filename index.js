@@ -245,12 +245,6 @@ const WandMixin = (BLEDevice) => {
             );
         }
         // --- Position ---
-        subscribeEuler(...args) {
-            return this.subscribePosition(...args);
-        }
-        unsubscribeEuler(...args) {
-            return this.unsubscribePosition(...args);
-        }
         subscribePosition() {
             if (this._eulerSubscribed) {
                 return Promise.resolve();
