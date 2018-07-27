@@ -81,26 +81,25 @@ class Device extends events.EventEmitter {
 
 // Mixin extending a BLEDevice
 const WandMixin = (BLEDevice) => {
-    const INFO_SERVICE = BLEDevice.localUuid('64A70010-F691-4B93-A6F4-0968F5B648F8');
-    const ORGANISATION_CHARACTERISTIC = BLEDevice.localUuid('64A7000B-F691-4B93-A6F4-0968F5B648F8');
-    const SOFTWARE_VERSION_CHARACTERISTIC = BLEDevice.localUuid('64A70013-F691-4B93-A6F4-0968F5B648F8');
-    const HARDWARE_BUILD_CHARACTERISTIC = BLEDevice.localUuid('64A70001-F691-4B93-A6F4-0968F5B648F8');
+    const BLE_UUID_INFORMATION_SERVICE              = BLEDevice.localUuid('64A70010-F691-4B93-A6F4-0968F5B648F8');
+    const BLE_UUID_INFORMATION_ORGANISATION_CHAR    = BLEDevice.localUuid('64A7000B-F691-4B93-A6F4-0968F5B648F8');
+    const BLE_UUID_INFORMATION_SW_CHAR              = BLEDevice.localUuid('64A70013-F691-4B93-A6F4-0968F5B648F8');
+    const BLE_UUID_INFORMATION_HW_CHAR              = BLEDevice.localUuid('64A70001-F691-4B93-A6F4-0968F5B648F8');
 
-    const IO_SERVICE = BLEDevice.localUuid('64A70012-F691-4B93-A6F4-0968F5B648F8');
-    const BATTERY_STATUS_CHARACTERISTIC = BLEDevice.localUuid('64A70007-F691-4B93-A6F4-0968F5B648F8');
-    const BUTTON_CHARACTERISTIC = BLEDevice.localUuid('64A7000D-F691-4B93-A6F4-0968F5B648F8');
-    const VIBRATOR_CHARACTERISTIC = BLEDevice.localUuid('64A70008-F691-4B93-A6F4-0968F5B648F8');
-    const LED_CHARACTERISTIC = BLEDevice.localUuid('64A70009-F691-4B93-A6F4-0968F5B648F8');
-    const WAND_NUMBER_CHARACTERISTIC = BLEDevice.localUuid('64A7000A-F691-4B93-A6F4-0968F5B648F8');
-    const RESET_PAIRING_CHARACTERISTIC = BLEDevice.localUuid('64A7000C-F691-4B93-A6F4-0968F5B648F8');
-    const SLEEP_CHARACTERISTIC = BLEDevice.localUuid('64A7000E-F691-4B93-A6F4-0968F5B648F8');
-    const KEEP_ALIVE_CHARACTERISTIC = BLEDevice.localUuid('64A7000F-F691-4B93-A6F4-0968F5B648F8');
+    const BLE_UUID_IO_SERVICE                       = BLEDevice.localUuid('64A70012-F691-4B93-A6F4-0968F5B648F8');
+    const BLE_UUID_IO_BATTERY_CHAR                  = BLEDevice.localUuid('64A70007-F691-4B93-A6F4-0968F5B648F8');
+    const BLE_UUID_IO_USER_BUTTON_CHAR              = BLEDevice.localUuid('64A7000D-F691-4B93-A6F4-0968F5B648F8');
+    const BLE_UUID_IO_VIBRATOR_CHAR                 = BLEDevice.localUuid('64A70008-F691-4B93-A6F4-0968F5B648F8');
+    const BLE_UUID_IO_LED_CHAR                      = BLEDevice.localUuid('64A70009-F691-4B93-A6F4-0968F5B648F8');
+    const BLE_UUID_IO_KEEP_ALIVE_CHAR               = BLEDevice.localUuid('64A7000F-F691-4B93-A6F4-0968F5B648F8');
 
-    const EULER_POSITION_SERVICE = BLEDevice.localUuid('64A70011-F691-4B93-A6F4-0968F5B648F8');
-    const EULER_POSITION_CHARACTERISTIC = BLEDevice.localUuid('64A70002-F691-4B93-A6F4-0968F5B648F8');
-    const CALIBRATE_MAGNOMETER_CHARACTERISTIC = BLEDevice.localUuid('64A70021-F691-4B93-A6F4-0968F5B648F8');
-    const RESET_QUATERNIONS_CHARACTERISTIC = BLEDevice.localUuid('64A70004-F691-4B93-A6F4-0968F5B648F8');
-    const TEMPERATURE_CHARACTERISTIC = BLEDevice.localUuid('64A70014-F691-4B93-A6F4-0968F5B648F8');
+    const BLE_UUID_SENSOR_SERVICE                   = BLEDevice.localUuid('64A70011-F691-4B93-A6F4-0968F5B648F8');
+    const BLE_UUID_SENSOR_QUATERNIONS_CHAR          = BLEDevice.localUuid('64A70002-F691-4B93-A6F4-0968F5B648F8');
+    const BLE_UUID_SENSOR_RAW_CHAR                  = BLEDevice.localUuid('64A7000A-F691-4B93-A6F4-0968F5B648F8');
+    const BLE_UUID_SENSOR_MOTION_CHAR               = BLEDevice.localUuid('64A7000C-F691-4B93-A6F4-0968F5B648F8');
+    const BLE_UUID_SENSOR_MAGN_CALIBRATE_CHAR       = BLEDevice.localUuid('64A70021-F691-4B93-A6F4-0968F5B648F8');
+    const BLE_UUID_SENSOR_QUATERNIONS_RESET_CHAR    = BLEDevice.localUuid('64A70004-F691-4B93-A6F4-0968F5B648F8');
+    const BLE_UUID_SENSOR_TEMP_CHAR                 = BLEDevice.localUuid('64A70014-F691-4B93-A6F4-0968F5B648F8');
 
 
     /**
@@ -115,7 +114,6 @@ const WandMixin = (BLEDevice) => {
             this._buttonSubscribed = false;
             this.onUserButton = this.onUserButton.bind(this);
             this.onPosition = this.onPosition.bind(this);
-            this.onSleepStatus = this.onSleepStatus.bind(this);
             this.onBatteryStatus = this.onBatteryStatus.bind(this);
         }
         static uInt8ToUInt16(byteA, byteB) {
@@ -130,49 +128,49 @@ const WandMixin = (BLEDevice) => {
         }
         // --- INFORMATION ---
         getOrganisation() {
-            return this.read(INFO_SERVICE, ORGANISATION_CHARACTERISTIC)
+            return this.read(BLE_UUID_INFORMATION_SERVICE, BLE_UUID_INFORMATION_ORGANISATION_CHAR)
                 .then(data => BLEDevice.uInt8ArrayToString(data));
         }
         getSoftwareVersion() {
-            return this.read(INFO_SERVICE, SOFTWARE_VERSION_CHARACTERISTIC)
+            return this.read(BLE_UUID_INFORMATION_SERVICE, BLE_UUID_INFORMATION_SW_CHAR)
                 .then(data => BLEDevice.uInt8ArrayToString(data));
         }
         getHardwareBuild() {
-            return this.read(INFO_SERVICE, HARDWARE_BUILD_CHARACTERISTIC)
+            return this.read(BLE_UUID_INFORMATION_SERVICE, BLE_UUID_INFORMATION_HW_CHAR)
                 .then(data => data[0]);
         }
         // --- IO ---
         getBatteryStatus() {
-            return this.read(IO_SERVICE, BATTERY_STATUS_CHARACTERISTIC)
+            return this.read(BLE_UUID_IO_SERVICE, BLE_UUID_IO_BATTERY_CHAR)
                 .then(data => data[0]);
         }
         subscribeBatteryStatus() {
             return this.subscribe(
-                IO_SERVICE,
-                BATTERY_STATUS_CHARACTERISTIC,
+                BLE_UUID_IO_SERVICE,
+                BLE_UUID_IO_BATTERY_CHAR,
                 this.onBatteryStatus,
             );
         }
         unsubscribeBatteryStatus() {
             return this.unsubscribe(
-                IO_SERVICE,
-                BATTERY_STATUS_CHARACTERISTIC,
+                BLE_UUID_IO_SERVICE,
+                BLE_UUID_IO_BATTERY_CHAR,
                 this.onBatteryStatus,
             );
         }
         getVibratorStatus() {
-            return this.read(IO_SERVICE, VIBRATOR_CHARACTERISTIC)
+            return this.read(BLE_UUID_IO_SERVICE, BLE_UUID_IO_VIBRATOR_CHAR)
                 .then(data => data[0]);
         }
         vibrate(pattern) {
             return this.write(
-                IO_SERVICE,
-                VIBRATOR_CHARACTERISTIC,
+                BLE_UUID_IO_SERVICE,
+                BLE_UUID_IO_VIBRATOR_CHAR,
                 [pattern],
             );
         }
         getLedStatus() {
-            return this.read(IO_SERVICE, LED_CHARACTERISTIC)
+            return this.read(BLE_UUID_IO_SERVICE, BLE_UUID_IO_LED_CHAR)
                 .then(data => data[0]);
         }
         setLed(state, color = 0x000000) {
@@ -186,27 +184,9 @@ const WandMixin = (BLEDevice) => {
             message.set([rgb565 >> 8], 1);
             message.set([rgb565 & 0xff], 2);
             return this.write(
-                IO_SERVICE,
-                LED_CHARACTERISTIC,
+                BLE_UUID_IO_SERVICE,
+                BLE_UUID_IO_LED_CHAR,
                 message,
-            );
-        }
-        getNumber() {
-            return this.read(IO_SERVICE, WAND_NUMBER_CHARACTERISTIC)
-                .then(data => data[0]);
-        }
-        setNumber(n) {
-            return this.write(
-                IO_SERVICE,
-                WAND_NUMBER_CHARACTERISTIC,
-                [n],
-            );
-        }
-        resetPairing() {
-            return this.write(
-                IO_SERVICE,
-                RESET_PAIRING_CHARACTERISTIC,
-                [1],
             );
         }
         subscribePosition() {
@@ -216,8 +196,8 @@ const WandMixin = (BLEDevice) => {
             // Synchronous state change. Multiple calls to subscribe will stop after the first
             this._eulerSubscribed = true;
             return this.subscribe(
-                EULER_POSITION_SERVICE,
-                EULER_POSITION_CHARACTERISTIC,
+                BLE_UUID_SENSOR_SERVICE,
+                BLE_UUID_SENSOR_QUATERNIONS_CHAR,
                 this.onPosition,
             ).catch((e) => {
                 // Revert state if failed to subscribe
@@ -232,8 +212,8 @@ const WandMixin = (BLEDevice) => {
             // Synchronous state change. Multiple calls to subscribe will stop after the first
             this._buttonSubscribed = true;
             return this.subscribe(
-                IO_SERVICE,
-                BUTTON_CHARACTERISTIC,
+                BLE_UUID_IO_SERVICE,
+                BLE_UUID_IO_USER_BUTTON_CHAR,
                 this.onUserButton,
             ).catch((e) => {
                 // Revert state if failed to subscribe
@@ -246,39 +226,21 @@ const WandMixin = (BLEDevice) => {
                 return Promise.resolve();
             }
             return this.unsubscribe(
-                IO_SERVICE,
-                BUTTON_CHARACTERISTIC,
+                BLE_UUID_IO_SERVICE,
+                BLE_UUID_IO_USER_BUTTON_CHAR,
             ).then(() => {
                 // Stay subscribed until unsubscribe suceeds
                 this._buttonSubscribed = false;
             });
         }
         getButtonStatus() {
-            return this.read(IO_SERVICE, BUTTON_CHARACTERISTIC)
-                .then(data => data[0]);
-        }
-        subscribeSleep() {
-            return this.subscribe(
-                IO_SERVICE,
-                SLEEP_CHARACTERISTIC,
-                this.onSleepStatus,
-            );
-        }
-        unsubscribeSleep() {
-            return this.unsubscribe(
-                IO_SERVICE,
-                SLEEP_CHARACTERISTIC,
-                this.onSleepStatus,
-            );
-        }
-        getSleepStatus() {
-            return this.read(IO_SERVICE, SLEEP_CHARACTERISTIC)
+            return this.read(BLE_UUID_IO_SERVICE, BLE_UUID_IO_USER_BUTTON_CHAR)
                 .then(data => data[0]);
         }
         keepAlive() {
             return this.write(
-                IO_SERVICE,
-                KEEP_ALIVE_CHARACTERISTIC,
+                BLE_UUID_IO_SERVICE,
+                BLE_UUID_IO_KEEP_ALIVE_CHAR,
                 [1],
             );
         }
@@ -296,8 +258,8 @@ const WandMixin = (BLEDevice) => {
             // Synchronous state change. Multiple calls to subscribe will stop after the first
             this._eulerSubscribed = true;
             return this.subscribe(
-                EULER_POSITION_SERVICE,
-                EULER_POSITION_CHARACTERISTIC,
+                BLE_UUID_SENSOR_SERVICE,
+                BLE_UUID_SENSOR_QUATERNIONS_CHAR,
                 this.onPosition,
             ).catch((e) => {
                 // Revert state if failed to subscribe
@@ -310,8 +272,8 @@ const WandMixin = (BLEDevice) => {
                 return Promise.resolve();
             }
             return this.unsubscribe(
-                EULER_POSITION_SERVICE,
-                EULER_POSITION_CHARACTERISTIC,
+                BLE_UUID_SENSOR_SERVICE,
+                BLE_UUID_SENSOR_QUATERNIONS_CHAR,
                 this.onPosition,
             ).then(() => {
                 // Stay subscribed until unsubscribe succeeds
@@ -325,8 +287,8 @@ const WandMixin = (BLEDevice) => {
             // Synchronous state change. Multiple calls to subscribe will stop after the first
             this._temperatureSubscribed = true;
             return this.subscribe(
-                EULER_POSITION_SERVICE,
-                TEMPERATURE_CHARACTERISTIC,
+                BLE_UUID_SENSOR_SERVICE,
+                BLE_UUID_SENSOR_TEMP_CHAR,
                 this.onTemperature,
             ).catch((e) => {
                 // Revert state if failed to subscribe
@@ -339,8 +301,8 @@ const WandMixin = (BLEDevice) => {
                 return Promise.resolve();
             }
             return this.unsubscribe(
-                EULER_POSITION_SERVICE,
-                TEMPERATURE_CHARACTERISTIC,
+                BLE_UUID_SENSOR_SERVICE,
+                BLE_UUID_SENSOR_TEMP_CHAR,
                 this.onTemperature,
             ).then(() => {
                 // Stay subscribed until unsubscribe succeeds
@@ -348,10 +310,10 @@ const WandMixin = (BLEDevice) => {
             });
         }
         calibrateMagnetometer() {
-            return this.calibrateChar(EULER_POSITION_SERVICE, CALIBRATE_MAGNOMETER_CHARACTERISTIC);
+            return this.calibrateChar(BLE_UUID_SENSOR_SERVICE, BLE_UUID_SENSOR_MAGN_CALIBRATE_CHAR);
         }
         resetQuaternions() {
-            return this.write(EULER_POSITION_SERVICE, RESET_QUATERNIONS_CHARACTERISTIC, [1]);
+            return this.write(BLE_UUID_SENSOR_SERVICE, BLE_UUID_SENSOR_QUATERNIONS_RESET_CHAR, [1]);
         }
         calibrateChar(sId, cId) {
             const wasSubscribed = this._eulerSubscribed;
@@ -398,9 +360,6 @@ const WandMixin = (BLEDevice) => {
         onTemperature(temperature) {
             let auxTemperature = Wand.uInt8ToUInt16(temperature[0], temperature[1]);
             this.emit('temperature', auxTemperature);
-        }
-        onSleepStatus(data) {
-            this.emit('sleep', data[0]);
         }
         onBatteryStatus(data) {
             this.emit('battery-status', data[0]);

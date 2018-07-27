@@ -94,20 +94,11 @@ class WandAdapter extends DeviceAdapter {
                 message.data.detail.value,
             ).then(() => null);
         }
-        case 'reset-pairing': {
-            return device.resetPairing().then(() => null);
-        }
         case 'subscribe-button': {
             return device.subscribeButton().then(() => null);
         }
         case 'unsubscribe-button': {
             return device.unsubscribeButton().then(() => null);
-        }
-        case 'subscribe-sleep': {
-            return device.subscribeSleep().then(() => null);
-        }
-        case 'unsubscribe-sleep': {
-            return device.unsubscribeSleep().then(() => null);
         }
         case 'keep-alive': {
             return device.keepAlive().then(() => null);
