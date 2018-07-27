@@ -7,18 +7,20 @@
     "lib": "lib"
   },
   "scripts": {
+    "test-jenkins": "JUNIT_REPORT_PATH=./test-results.xml mocha --colors --reporter mocha-jenkins-reporter --timeout 30000",
     "test": "mocha --exit --timeout 30000",
     "cjs": "rollup -c"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "rollup": "^0.56.5",
-    "socket.io": "^2.0.4",
     "chai": "^4.1.2",
     "chai-as-promised": "^7.1.1",
     "mocha": "^5.2.0",
-    "mock-require": "^3.0.2"
+    "mocha-jenkins-reporter": "^0.3.12",
+    "mock-require": "^3.0.2",
+    "rollup": "^0.56.5",
+    "socket.io": "^2.0.4"
   },
   "dependencies": {
     "jszip": "^3.1.5"

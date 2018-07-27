@@ -17,6 +17,7 @@ pipeline {
             steps {
                 script {
                     sh "yarn test"
+                    junit 'test-results.xml'
                 }
             }
         }
