@@ -16,7 +16,7 @@ pipeline {
         stage('run tests') {
             steps {
                 script {
-                    sh "yarn test"
+                    sh "yarn test-jenkins"
                     junit 'test-results.xml'
                 }
             }
