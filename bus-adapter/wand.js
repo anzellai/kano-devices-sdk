@@ -104,10 +104,10 @@ class WandAdapter extends DeviceAdapter {
             return device.keepAlive().then(() => null);
         }
         case 'subscribe-position': {
-            return device.subscribeEuler().then(() => null);
+            return device.subscribePosition().then(() => null);
         }
         case 'unsubscribe-position': {
-            return device.unsubscribeEuler().then(() => null);
+            return device.unsubscribePosition().then(() => null);
         }
         case 'calibrate-magnetometer': {
             return device.calibrateMagnetometer().then(() => null);
