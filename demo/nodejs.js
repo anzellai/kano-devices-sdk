@@ -6,7 +6,7 @@ Devices.on('new-device', (device) => {
         device.on('user-button', value => console.log(value));
         device.on('position', value => console.log(value));
         device.subscribeButton()
-            .then(() => device.subscribeEuler())
+            .then(() => device.subscribePosition())
             .catch(e => console.log(e.stack || e));
     }
 });
