@@ -137,9 +137,6 @@ class WandAdapter extends DeviceAdapter {
         case 'unsubscribe-position': {
             return device.unsubscribeEuler().then(() => null);
         }
-        case 'calibrate-gyroscope': {
-            return device.calibrateGyroscope().then(() => null);
-        }
         case 'calibrate-magnetometer': {
             return device.calibrateMagnetometer().then(() => null);
         }

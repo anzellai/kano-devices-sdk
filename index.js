@@ -98,7 +98,6 @@ const WandMixin = (BLEDevice) => {
 
     const EULER_POSITION_SERVICE = BLEDevice.localUuid('64A70011-F691-4B93-A6F4-0968F5B648F8');
     const EULER_POSITION_CHARACTERISTIC = BLEDevice.localUuid('64A70002-F691-4B93-A6F4-0968F5B648F8');
-    const CALIBRATE_GYROSCOPE_CHARACTERISTIC = BLEDevice.localUuid('64A70020-F691-4B93-A6F4-0968F5B648F8');
     const CALIBRATE_MAGNOMETER_CHARACTERISTIC = BLEDevice.localUuid('64A70021-F691-4B93-A6F4-0968F5B648F8');
     const RESET_QUATERNIONS_CHARACTERISTIC = BLEDevice.localUuid('64A70004-F691-4B93-A6F4-0968F5B648F8');
     const TEMPERATURE_CHARACTERISTIC = BLEDevice.localUuid('64A70014-F691-4B93-A6F4-0968F5B648F8');
@@ -347,9 +346,6 @@ const WandMixin = (BLEDevice) => {
                 // Stay subscribed until unsubscribe succeeds
                 this._temperatureSubscribed = false;
             });
-        }
-        calibrateGyroscope() {
-            return this.calibrateChar(EULER_POSITION_SERVICE, CALIBRATE_GYROSCOPE_CHARACTERISTIC);
         }
         calibrateMagnetometer() {
             return this.calibrateChar(EULER_POSITION_SERVICE, CALIBRATE_MAGNOMETER_CHARACTERISTIC);
