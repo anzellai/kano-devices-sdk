@@ -297,6 +297,12 @@ const BLEDeviceMixin = (Device) => {
                 },
             };
         }
+        dispose() {
+            return this.terminate()
+                .then(() => {
+                    return this.manager.removeDevice(this);
+                });
+        }
         terminate() {
             this.removeAllListeners();
             return this.disconnect();

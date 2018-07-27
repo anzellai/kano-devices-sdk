@@ -943,6 +943,11 @@ class Devices extends events.EventEmitter {
     getAll() {
         return Array.from(this.devices.values());
     }
+    removeDevice(device) {
+        // Returns true if the devices was removed or false if
+        // the device id was not found in the devices array.
+        return Promise.resolve(this.devices.delete(device.id));
+    }
     terminate() {
         const terminations = [];
         this.devices.forEach((value) => {
