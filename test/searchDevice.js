@@ -8,6 +8,7 @@ let chai = require('chai').use(chaiAsPromised);
 let assert = chai.assert;
 
 mock('noble', noble);
+mock('noble-uwp', noble);
 
 const Devices = require('../platforms/nodejs');
 
