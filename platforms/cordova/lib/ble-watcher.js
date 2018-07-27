@@ -67,9 +67,9 @@ class BLEWatcher {
                 .then(() => {
                     setTimeout(() => {
                         let closestDevice = undefined;
-                        this.watcher.getDevices(testFunc)
+                        this.getDevices(testFunc)
                             .forEach(device => {
-                                closestDevice = closestDevice || wand;
+                                closestDevice = closestDevice || device;
                                 if (!closestDevice || (closestDevice.rssi < device.rssi)) {
                                     closestDevice = device;
                                 }
