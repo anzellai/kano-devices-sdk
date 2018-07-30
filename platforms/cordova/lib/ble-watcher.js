@@ -21,7 +21,7 @@ class BLEWatcher {
                 reject,
                 to: setTimeout(() => {
                     this.searches.splice(searchIndex, 1);
-                    this.maybeStopScan();
+                    this.stopScan();
                     reject(new Error(`Could not find device after ${timeout}ms`));
                 }, timeout),
             };
@@ -46,7 +46,7 @@ class BLEWatcher {
             }
             matched = true;
             clearTimeout(search.to);
-            this.maybeStopScan()
+            this.stopScan()
                 .then(() => search.resolve(device))
                 .catch(e => search.reject(e));
         });
@@ -77,6 +77,7 @@ class BLEWatcher {
                         if (!closestDevice) {
                             return reject(new Error(`No devices have been found after ${timeout}ms.`));
                         }
+                        this.stopScan();
                         return resolve(closestDevice);
                     }, timeout);
                 })
