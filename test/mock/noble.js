@@ -11,7 +11,7 @@ function generateWrongName() {
     return null;
 }
 
-function generateWandName(prefix) {
+function generateWandName() {
     return `Kano-Wand-${parseInt(100 * Math.random())}-${parseInt(100 * Math.random())}-${parseInt(100 * Math.random())}`;
 }
 

@@ -1,3 +1,3 @@
-import '../../../../jszip/dist/jszip.js';
+import 'jszip/dist/jszip.js';
 
 export default window.JSZip;

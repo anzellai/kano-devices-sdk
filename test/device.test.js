@@ -1,5 +1,5 @@
 const mock = require('mock-require');
-const MockNoble = require('./mocks/noble');
+const MockNoble = require('./mock/noble');
 const chaiAsPromised = require('chai-as-promised');
 
 let noble = new MockNoble();
