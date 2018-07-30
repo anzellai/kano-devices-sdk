@@ -32,8 +32,8 @@ describe('Search for devices', () => {
                 .then(device => {
                     // Check if there's any device closer than the one returned.
                     noble.emittedDevices.forEach(dev => {
-                        if (dev.rssi > device.rssi) {
-                            reject();
+                        if (Devices.getDeviceID(dev.name) == device.type && dev.rssi > device.rssi) {
+                            reject(new Error('Found a closer device.'));
                         }
                     });
                     resolve();

@@ -22,9 +22,9 @@ suite('Devices', () => {
         test('searchForClosestDevice()', () => {
             return new Promise((resolve, reject) => {
                 Manager.searchForClosestDevice('wand')
-                    .then(wand => {
+                    .then(device => {
                         window.bluetoothle.emittedDevices.forEach(dev => {
-                            if (dev.rssi > wand.device.rssi) {
+                            if (Manager.getDeviceID(dev.name) == device.type && dev.rssi > device.device.rssi) {
                                 return reject(new Error('Found a closer device.'));
                             }
                         });
