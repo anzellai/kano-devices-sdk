@@ -1,5 +1,8 @@
 export const loadTests = (testFiles) => {
-    mocha.setup('tdd');
+    mocha.setup({
+        ui: 'tdd',
+        globals: ['bluetoothle']
+    });
     mocha.timeout(30000);
     return Promise.all(testFiles.map(t => import(t)))
         .then(() => {
