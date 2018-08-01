@@ -41,6 +41,7 @@ export const BluetoothLESetup = () => {
     window.bluetoothle = new BluetoothLE();
     document.dispatchEvent(new Event('deviceready'));
 };
+
 export const BluetoothLETeardown = () => {
     delete window.bluetoothle;
 };

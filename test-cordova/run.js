@@ -1,7 +1,7 @@
 export const loadTests = (testFiles) => {
     mocha.setup({
         ui: 'tdd',
-        globals: ['bluetoothle']
+        globals: ['cordova', 'bluetoothle']
     });
     mocha.timeout(30000);
     return Promise.all(testFiles.map(t => import(t)))

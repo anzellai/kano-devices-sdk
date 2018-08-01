@@ -1,5 +1,4 @@
-import {BluetoothLESetup, BluetoothLETeardown} from '../mock/bluetoothle.js';
-import '../mock/cordova.js';
+import {CordovaSetup, CordovaTeardown} from '../mock/cordova.js';
 
 import { setup, test, assert, suite, teardown } from '../tools.js';
 import Manager from '../../../platforms/cordova/index.js';
@@ -7,7 +6,7 @@ import Manager from '../../../platforms/cordova/index.js';
 suite('Device', () => {
     suite('#Device', () => {
         setup(() => {
-            BluetoothLESetup();
+            CordovaSetup();
         });
         test('dispose()', () => {
             return new Promise((resolve, reject) => {
@@ -26,7 +25,7 @@ suite('Device', () => {
         });
         teardown(() => {
             Manager.terminate();
-            BluetoothLETeardown();
+            CordovaTeardown();
         });
     });
 });
