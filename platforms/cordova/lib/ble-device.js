@@ -21,11 +21,13 @@ const BLEDeviceMixin = (Device) => {
             this.watcher = new Watcher();
             this.reset(device);
         }
-        reset(device) {
+        reset(device, keepState = false) {
             this.device = device;
             this._setupPromise = null;
             this.device.on('disconnect', this.onDisconnect);
-            this.state = 'disconnected';
+            if (!keepState) {
+                this.state = 'disconnected';
+            }
         }
         setState(state) {
             const oldState = this.state;
@@ -70,6 +72,9 @@ const BLEDeviceMixin = (Device) => {
             this.subManager.clear();
         }
         setup() {
+            if (this.state === 'reconnecting') {
+                return Promise.reject(new Error('Cannot setup device while reconnecting'));
+            }
             if (!this._setupPromise) {
                 this._setupPromise = this.connect()
                     .then(() => new Promise(resolve => setTimeout(resolve, 1000)))
@@ -116,7 +121,7 @@ const BLEDeviceMixin = (Device) => {
             return this.watcher.searchForDevice(testFunc, RECONNECT_SCAN_TIMEOUT)
                 .then((device) => {
                     // Reset this device with the device found through scan
-                    this.reset(device);
+                    this.reset(device, true);
                     // Custom setup method after a reconnect. Avoids the `connecting` state
                     this._setupPromise = this.device.connect()
                         .then(() => this.discover())
@@ -125,7 +130,7 @@ const BLEDeviceMixin = (Device) => {
                             this.subManager.resubscribe();
                             this.setState('connected');
                         });
-                    return this.setup();
+                    return this._setupPromise;
                 })
                 .catch(() => {
                     this.setState('disconnected');
