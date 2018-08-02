@@ -7,7 +7,6 @@ class BusAdapter {
         this.Devices = opts.Devices;
         this.bus = opts.bus;
 
-        this.setupDiscovery();
         this.setupRequests();
     }
     static buildResponse(message, value) {
@@ -17,6 +16,16 @@ class BusAdapter {
             data: {
                 deviceId: message.data.deviceId,
                 value,
+            },
+        };
+    }
+    static buildErrorResponse(message, error) {
+        return {
+            eventId: message.eventId,
+            error: {
+                name: error.name,
+                message: error.message,
+                stack: error.stack,
             },
         };
     }
@@ -43,16 +52,8 @@ class BusAdapter {
     reply(message, value = null) {
         this.bus.emit('response', BusAdapter.buildResponse(message, value));
     }
-    setupDiscovery() {
-        this.Devices.on('new-device', (device) => {
-            const adapter = BusAdapter.getAdapterForDevice(device);
-            adapter.onDiscover(device, this);
-            this.bus.emit('device-available', {
-                eventId: 0,
-                error: null,
-                data: adapter.getDeviceSetupInfo(device),
-            });
-        });
+    replyError(message, error) {
+        this.bus.emit('response', BusAdapter.buildErrorResponse(message, error))
     }
     static getAdapter(device) {
         let adapter;
@@ -136,7 +137,9 @@ class BusAdapter {
                     break;
                 }
             }
-            responsePromise.then(value => this.reply(message, value));
+            responsePromise
+                .then(value => this.reply(message, value))
+                .catch(e => this.replyError(message, e));
         });
     }
 }
