@@ -192,9 +192,21 @@ const BLEDeviceMixin = (Device) => {
             };
         }
         dispose() {
-            return this.terminate()
+            return Promise.resolve()
                 .then(() => {
-                    return this.manager.removeDevice(this);
+                    if (this.state !== 'disconnected') {
+                        return this.disconnect();
+                    }
+                })
+                .then(() => {
+                    if (this.previouslyConnected) {
+                        return this.device.close();
+                    }
+                })
+                .then(() => {
+                    this.device.removeAllListeners();
+                    this.manager.removeDevice(this);
+                    return Promise.resolve();
                 });
         }
         terminate() {
