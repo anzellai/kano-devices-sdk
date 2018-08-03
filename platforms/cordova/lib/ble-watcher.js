@@ -92,7 +92,7 @@ class BLEWatcher {
             .then(() => Bluetooth.startScan())
             .then(() => {
                 this.isScanning = true;
-                Bluetooth.on('scan-result', (device) => {
+                this.scanResultCallback = (device) => {
                     // Update the watcher devices list
                     let auxDevice = this.devices.get(device.address);
                     if (!auxDevice) {
@@ -111,7 +111,8 @@ class BLEWatcher {
                         this.searches.splice(index, 1);
                         search.resolve(this.devices.get(device.address));
                     });
-                });
+                };
+                Bluetooth.on('scan-result', this.scanResultCallback);
             });
     }
     stopScan() {
@@ -119,7 +120,13 @@ class BLEWatcher {
             return Promise.resolve();
         }
         return Bluetooth.stopScan()
-            .then(() => this.isScanning = false);
+            .then(() => {
+                if (this.scanResultCallback) {
+                    Bluetooth.removeListener('scan-result', this.scanResultCallback);
+                }
+
+                this.isScanning = false;
+            });
     }
 }
 
