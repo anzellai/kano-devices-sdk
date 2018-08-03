@@ -1,5 +1,5 @@
 {
-  "name": "kano-devices-sdk",
+  "name": "@kano/devices-sdk",
   "version": "1.0.1",
   "description": "",
   "main": "index.js",
