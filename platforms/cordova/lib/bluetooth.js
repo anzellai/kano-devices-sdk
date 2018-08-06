@@ -8,6 +8,20 @@ function pCall(name, opts) {
     return new Promise((resolve, reject) => BluetoothManager.adapter[name](resolve, reject, opts));
 }
 
+const onPause = () => {
+    if (BluetoothManager) {
+        BluetoothManager.pause();
+    }
+};
+document.addEventListener('pause', onPause, false);
+
+const onResume = () => {
+    if (BluetoothManager) {
+        BluetoothManager.resume();
+    }
+};
+document.addEventListener('resume', onResume, false);
+
 class Characteristic {
     constructor(result, service) {
         this.uuid = result.uuid;
@@ -167,6 +181,29 @@ class Bluetooth extends EventEmitter {
         super();
         this.devices = new Map();
         this.adapter = window.bluetoothle;
+        this.state = 'resumed';
+    }
+    setState(newState) {
+        if (this.state != newState) {
+            this.state = newState;
+            switch(this.state) {
+                case 'paused': {
+                    this.emit('pause');
+                }
+                case 'reusmed': {
+                    this.emit('resume');
+                }
+            }
+        }
+    }
+    getState() {
+        return this.state;
+    }
+    pause() {
+        this.setState('paused');
+    }
+    resume() {
+        this.setState('resumed');
     }
     updateAdapter() {
         this.adapter = window.bluetoothle;
@@ -198,6 +235,10 @@ class Bluetooth extends EventEmitter {
         ));
     }
     startScan(options) {
+        if (this.state == 'paused') {
+            return Promise.reject(new Error('The device is paused.'));
+        }
+
         return this.isScanning().then((itIs) => {
             if (itIs) {
                 return Promise.resolve();

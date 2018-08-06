@@ -11,6 +11,11 @@ class BLEWatcher {
         this.searches = [];
         this.devices = new Map();
         this.isScanning = false;
+
+        Bluetooth.on('pause', this.onPause.bind(this));
+    }
+    onPause() {
+        this.stopScan();
     }
     setLogger(logger) {
         this.log = logger;
@@ -72,6 +77,9 @@ class BLEWatcher {
             this.startScan()
                 .then(() => {
                     setTimeout(() => {
+                        if (Bluetooth.getState() == 'paused') {
+                            return reject(new Error('The device was paused.'));
+                        }
                         let closestDevice = undefined;
                         this.log.trace('Finding closest device amongst results...');
                         this.getDevices(testFunc)
@@ -108,8 +116,7 @@ class BLEWatcher {
                     } else {
                         Object.assign(auxDevice, device);
                     }
-
-                    // If there's anyone looking for this device, resolve
+                    
                     this.searches.forEach((search, index) => {
                         const isMatch = search.test(device);
                         if (!isMatch) {
@@ -136,6 +143,13 @@ class BLEWatcher {
                 }
 
                 this.isScanning = false;
+
+                // Remove all the search queries.
+                while (this.searches.length) {
+                    clearTimeout(this.searches[0].to);
+                    this.searches[0].reject(new Error('The device stopped scanning.'));
+                    this.searches.splice(0, 1);
+                }
             });
     }
 }
