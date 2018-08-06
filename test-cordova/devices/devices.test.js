@@ -1,7 +1,7 @@
 import {BluetoothLESetup, BluetoothLETeardown} from '../mock/bluetoothle.js';
 import '../mock/cordova.js';
 
-import { setup, test, assert, suite, teardown } from '../tools.js';
+import { setup, test, suite, teardown } from '../tools.js';
 import Manager from '../../../platforms/cordova/index.js';
 
 suite('Devices', () => {
@@ -24,7 +24,7 @@ suite('Devices', () => {
         });
         test('searchForClosestDevice()', () => {
             return new Promise((resolve, reject) => {
-                Manager.searchForClosestDevice('wand')
+                Manager.searchForClosestDevice('wand', 100)
                     .then(device => {
                         window.bluetoothle.emittedDevices.forEach(dev => {
                             if (Manager.getDeviceID(dev.name) == device.type && dev.rssi > device.device.rssi) {

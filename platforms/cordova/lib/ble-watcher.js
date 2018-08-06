@@ -12,6 +12,9 @@ class BLEWatcher {
         this.devices = new Map();
         this.isScanning = false;
     }
+    setLogger(logger) {
+        this.log = logger;
+    }
     searchForDevice(testFunc, timeout = 10000) {
         return new Promise((resolve, reject) => {
             const searchIndex = this.searches.length;
@@ -56,7 +59,10 @@ class BLEWatcher {
         const returnDevices = [];
         this.devices.forEach(device => {
             if (searchFunction(device)) {
+                this.log.trace(`Discovered device: ${device.name} -> Did match`);
                 returnDevices.push(device);
+            } else {
+                this.log.trace(`Discovered device: ${device.name} -> Not a candidate for this search`);
             }
         });
         return returnDevices;
@@ -67,9 +73,11 @@ class BLEWatcher {
                 .then(() => {
                     setTimeout(() => {
                         let closestDevice = undefined;
+                        this.log.trace('Finding closest device amongst results...');
                         this.getDevices(testFunc)
                             .forEach(device => {
                                 closestDevice = closestDevice || device;
+                                this.log.trace(`RSSI Sort: ${device.name} => ${device.rssi}`);
                                 if (!closestDevice || (closestDevice.rssi < device.rssi)) {
                                     closestDevice = device;
                                 }
@@ -105,8 +113,10 @@ class BLEWatcher {
                     this.searches.forEach((search, index) => {
                         const isMatch = search.test(device);
                         if (!isMatch) {
+                            this.log.trace(`Discovered device: ${device.name} -> Not a candidate for this search`);
                             return;
                         }
+                        this.log.trace(`Discovered device: ${device.name} -> Did match`);
                         clearTimeout(search.to);
                         this.searches.splice(index, 1);
                         search.resolve(this.devices.get(device.address));

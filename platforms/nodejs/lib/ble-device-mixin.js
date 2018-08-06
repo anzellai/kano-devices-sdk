@@ -36,6 +36,7 @@ const BLEDeviceMixin = (Device) => {
         }
         setState(state) {
             const oldState = this.state;
+            this.manager.log.trace(`[${this.getAdvertisementName()}]: Updating state from ${oldState} to ${state}`);
             this.state = state;
             if (oldState !== state) {
                 switch (state) {
@@ -62,6 +63,7 @@ const BLEDeviceMixin = (Device) => {
             }
         }
         onDisconnect() {
+            this.manager.log.trace(`[${this.getAdvertisementName()}]: Disconnect event received`);
             if (this.state === 'disconnected' || this.state === 'connecting') {
                 return;
             }
@@ -138,6 +140,7 @@ const BLEDeviceMixin = (Device) => {
             this.serviceCache = new Map();
             this.charCache = new Map();
             return new Promise((resolve, reject) => {
+                this.manager.log.trace(`[${this.getAdvertisementName()}]: Discovering all services and characteristics...`);
                 this.device.discoverAllServicesAndCharacteristics((err, services, chars) => {
                     if (err) {
                         return reject(err);
@@ -175,6 +178,7 @@ const BLEDeviceMixin = (Device) => {
             return BLEDevice.unsubscribe(char, callback);
         }
         write(sId, cId, value) {
+            this.manager.log.trace(`[${this.getAdvertisementName()}]: Write: ${sId}:${cId} => ${value}`);
             return this.setup()
                 .then(() => {
                     const char = this.getCharacteristic(sId, cId);
@@ -182,6 +186,7 @@ const BLEDeviceMixin = (Device) => {
                 });
         }
         read(sId, cId) {
+            this.manager.log.trace(`[${this.getAdvertisementName()}]: Read: ${sId}:${cId}`);
             return this.setup().then(() => {
                 const char = this.getCharacteristic(sId, cId);
                 return BLEDevice.read(char);

@@ -788,6 +788,23 @@ const DFUMixin = (BLEDevice) => {
     return DFU;
 };
 
+class Logger {
+    trace() {}
+    debug() {}
+    info(...args) {
+        console.log(...args);
+    }
+    warn(...args) {
+        console.log(...args);
+    }
+    error(...args) {
+        console.log(...args);
+    }
+    log(...args) {
+        console.log(...args);
+    }
+}
+
 const WAND_PREFIX = 'Kano-Wand';
 
 const WAND_ID = 'wand';
@@ -820,11 +837,16 @@ class Devices extends events.EventEmitter {
         
         this.deviceIDTestFunction = {};
         this.deviceIDTestFunction[WAND_ID] = this.wandTestFunction.bind(this);
-
+        
         this.deviceIDClass = {};
         this.deviceIDClass[WAND_ID] = this.Wand;
 
+        this.setLogger(new Logger());
         // Add here future devices
+    }
+    setLogger(logger) {
+        this.log = logger;
+        this.watcher.setLogger(logger);
     }
     wandTestFunction(devicePrefix = null) {
         devicePrefix = devicePrefix || this.wandPrefix || WAND_PREFIX;
@@ -845,6 +867,8 @@ class Devices extends events.EventEmitter {
         if (!(deviceID in this.deviceIDTestFunction)) {
             return Promise.reject(new Error('Unrecognised deviceID'));
         }
+
+        this.log.info(`Starting searchForClosestDevice with type ${deviceID}. Will stop after ${timeout}ms...`);
 
         return this.watcher.searchForClosestDevice(this.deviceIDTestFunction[deviceID](), timeout)
             .then((ble) => {
@@ -870,6 +894,8 @@ class Devices extends events.EventEmitter {
         if (!(deviceID in this.deviceIDTestFunction)) {
             return Promise.reject(new Error('Unrecognised device.'));
         }
+
+        this.log.info(`Starting searchForClosestDevice with prefix ${devicePrefix}. Will stop after ${timeout}ms...`);
 
         return this.watcher.searchForDevice(this.deviceIDTestFunction[deviceID](devicePrefix), timeout)
             .then((ble) => {
@@ -924,6 +950,7 @@ class Devices extends events.EventEmitter {
             }
         });
         if (!alreadyAdded) {
+            this.log.info(`Adding device ${device.id}`);
             this.devices.set(device.id, device);
             this.emit('new-device', device);
         }
@@ -943,6 +970,7 @@ class Devices extends events.EventEmitter {
         return Promise.resolve(this.devices.delete(device.id));
     }
     terminate() {
+        this.setLogger(new Logger());
         const terminations = [];
         this.devices.forEach((value) => {
             terminations.push(value.terminate());

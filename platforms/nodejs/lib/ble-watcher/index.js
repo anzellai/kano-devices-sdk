@@ -15,6 +15,9 @@ class BLEWatcher extends EventEmitter {
         super();
         this.watcher = new NobleWatcher();
     }
+    setLogger(logger) {
+        this.log = logger;
+    }
 
     /**
      * Starts scanning for bluetooth devices. Resolves when a device found matches the test function
@@ -28,10 +31,14 @@ class BLEWatcher extends EventEmitter {
         return new Promise((resolve, reject) => {
             let to;
             const onDiscover = (peripheral) => {
+                const name = peripheral.advertisement
+                    && peripheral.advertisement.localName ? peripheral.advertisement.localName : '';
                 const isMatch = testFunc(peripheral);
                 if (!isMatch) {
+                    this.log.trace(`Discovered device: ${name} -> Not a candidate for this search`);
                     return;
                 }
+                this.log.trace(`Discovered device: ${name} -> Did match`);
                 clearTimeout(to);
                 this.watcher.removeListener('discover', onDiscover);
                 this.watcher.stop();
@@ -56,28 +63,37 @@ class BLEWatcher extends EventEmitter {
             let devicesFound = new Map();
 
             const onDiscover = (peripheral) => {
+                const name = peripheral.advertisement
+                    && peripheral.advertisement.localName ? peripheral.advertisement.localName : '';
                 if (!testFunc(peripheral)) {
+                    this.log.trace(`Discovered device: ${name} -> Not a candidate for this search`);
                     return;
                 }
-
+                
+                this.log.trace(`Discovered device: ${name} -> Did match`);
                 // Update the device
                 devicesFound.set(peripheral.id, peripheral);
             };
-
+            
             this.watcher.on('discover', onDiscover);
             this.watcher.start();
-
+            
             setTimeout(() => {
+                this.log.trace('Finding closest device amongst results...');
                 this.watcher.removeListener('discover', onDiscover);
                 this.watcher.stop();
-
+                
                 if (devicesFound.size <= 0) {
+                    this.log.trace('No device found, bail out from sorting by rssi');
                     return reject(new Error(`No devices have been found after ${timeout}ms.`));
                 }
 
                 // Search for the biggest signal
                 let aux = [null, null];
                 devicesFound.forEach((value, key) => {
+                    const name = value.advertisement
+                        && value.advertisement.localName ? value.advertisement.localName : '';
+                    this.log.trace(`RSSI Sort: ${name} => ${value.rssi}`);
                     if (!aux[0] || value.rssi > aux[1]) {
                         aux = [value.id, value.rssi];
                     }
