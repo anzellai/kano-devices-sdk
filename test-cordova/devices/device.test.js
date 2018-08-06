@@ -11,7 +11,7 @@ suite('Device', () => {
         });
         test('dispose()', () => {
             return new Promise((resolve, reject) => {
-                Manager.searchForClosestDevice('wand')
+                Manager.searchForClosestDevice('wand', 1000)
                     .then(device => {
                         device.dispose()
                             .then(() => {

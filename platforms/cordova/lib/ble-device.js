@@ -31,6 +31,7 @@ const BLEDeviceMixin = (Device) => {
         }
         setState(state) {
             const oldState = this.state;
+            this.manager.log.trace(`[${this.getAdvertisementName()}]: Updating state from ${oldState} to ${state}`);
             this.state = state;
             if (oldState !== state) {
                 switch (state) {
@@ -57,6 +58,7 @@ const BLEDeviceMixin = (Device) => {
             }
         }
         onDisconnect() {
+            this.manager.log.trace(`[${this.getAdvertisementName()}]: Disconnect event received`);
             if (this.state === 'disconnected' || this.state === 'connecting') {
                 return;
             }
@@ -137,6 +139,7 @@ const BLEDeviceMixin = (Device) => {
                 });
         }
         discover() {
+            this.manager.log.trace(`[${this.getAdvertisementName()}]: Discovering all services and characteristics...`);
             return this.device.discover();
         }
         disconnect() {
@@ -146,12 +149,14 @@ const BLEDeviceMixin = (Device) => {
                 .then(() => this.onManualDisconnect());
         }
         write(sId, cId, value) {
+            this.manager.log.trace(`[${this.getAdvertisementName()}]: Write: ${sId}:${cId} => ${value}`);
             return this.setup().then(() => {
                 const char = this.getCharacteristic(sId, cId);
                 return char.write(value);
             });
         }
         read(sId, cId) {
+            this.manager.log.trace(`[${this.getAdvertisementName()}]: Read: ${sId}:${cId}`);
             return this.setup().then(() => {
                 const char = this.getCharacteristic(sId, cId);
                 return char.read();
