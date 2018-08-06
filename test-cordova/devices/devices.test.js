@@ -24,7 +24,7 @@ suite('Devices', () => {
         });
         test('searchForClosestDevice()', () => {
             return new Promise((resolve, reject) => {
-                Manager.searchForClosestDevice('wand', 100)
+                Manager.searchForClosestDevice('wand', 1000)
                     .then(device => {
                         window.bluetoothle.emittedDevices.forEach(dev => {
                             if (Manager.getDeviceID(dev.name) == device.type && dev.rssi > device.device.rssi) {
