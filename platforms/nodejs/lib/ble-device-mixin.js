@@ -225,6 +225,7 @@ const BLEDeviceMixin = (Device) => {
                     reject(new Error('Unable to connect in ${timeout}ms.'));
                 }, timeout);
                 peripheral.connect((err) => {
+                    clearTimeout(to);
                     if (err) {
                         return reject(err);
                     }
