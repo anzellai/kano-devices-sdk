@@ -75,6 +75,7 @@ class Device extends events.EventEmitter {
         counter += 1;
     }
     terminate() {
+        this.manager.removeDevice(this);
         return Promise.resolve(this.id);
     }
 }

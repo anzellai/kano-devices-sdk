@@ -314,8 +314,11 @@ const BLEDeviceMixin = (Device) => {
                 });
         }
         terminate() {
-            this.removeAllListeners();
-            return this.disconnect();
+            return super.terminate()
+                .then(() => {
+                    this.removeAllListeners();
+                    return this.disconnect();
+                });
         }
         static localUuid(uuid) {
             return uuid.replace(/-/g, '').toLowerCase();

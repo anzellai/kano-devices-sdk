@@ -1,11 +1,14 @@
 class ElectronIpcBus {
     constructor(ipc, window) {
         this.ipc = ipc;
+        this.setWindow(window);
+        this.listeners = new Map();
+    }
+    setWindow(window) {
         this.window = window;
         this.window.on('close', () => {
             this.closed = true;
         });
-        this.listeners = new Map();
     }
     emit(name, data) {
         if (this.closed || !this.window || !this.window.webContents) {
