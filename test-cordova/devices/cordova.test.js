@@ -31,9 +31,9 @@ suite('#Cordova', () => {
         return new Promise((resolve, reject) => {
             setTimeout(() => {
                 TriggerPause();
-            }, parseInt(Math.random() * 1000));
+            }, parseInt(Math.random() * 500));
 
-            Manager.searchForClosestDevice('wand')
+            Manager.searchForClosestDevice('wand', 800)
                 .then(device => {
                     TriggerResume();
                     reject(new Error('A device was returned after pause was triggered.'));

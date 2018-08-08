@@ -87,14 +87,14 @@ const BLEDeviceMixin = (Device) => {
             }
             return this._setupPromise;
         }
-        connect() {
+        connect(timeout = 5000) {
             if (this.state === 'connected') {
                 return Promise.resolve();
             }
             this.setState('connecting');
             return new Promise((resolve, reject) => {
                 if (!this.previouslyConnected) {
-                    this.device.connect()
+                    this.device.connect(timeout)
                         .then(data => {
                             this.previouslyConnected = true;
                             this.setState('connected');
@@ -104,7 +104,7 @@ const BLEDeviceMixin = (Device) => {
                             reject(err);
                         });
                 } else {
-                    this.device.reconnect()
+                    this.device.reconnect(timeout)
                         .then(data => {
                             this.previouslyConnected = true;
                             this.setState('connected');

@@ -28,6 +28,17 @@ describe('Device', () => {
                 .catch(reject);
         }));
     });
+    it('connect(): timeout should return after 1ms', () => {
+        return assert.isFulfilled(new Promise((resolve, reject) => {
+            Devices.searchForDevice('Kano-Wand-')
+                .then(device => {
+                    device.connect(1)
+                        .then(reject)
+                        .catch(resolve);
+                })
+                .catch(reject);
+        }));
+    });
 });
 
 process.on('exit', () => {

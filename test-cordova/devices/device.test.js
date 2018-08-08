@@ -22,6 +22,21 @@ suite('#Device', () => {
                 .catch(reject);
         });
     });
+    test('connect(): should reject if it takes too long to connect.', () => {
+        return new Promise((resolve, reject) => {
+            Manager.searchForDevice('Kano-Wand-')
+                .then(device => {
+                    device.connect(0)
+                        .then(() => {
+                            reject(new Error('Connected too fast.'));   
+                        })
+                        .catch(resolve);
+                })
+                .catch(e => {
+                    reject(new Error('Unable to find a device', e));
+                });
+        });
+    });
     teardown(() => {
         Manager.terminate();
         CordovaTeardown();

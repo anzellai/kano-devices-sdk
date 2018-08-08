@@ -118,28 +118,37 @@ class Device extends EventEmitter {
         this.manager = manager;
         this.discovered = false;
     }
-    connect() {
+    connect(timeout = 5000) {
         return this.isConnected()
             .then((isConnected) => {
                 if (isConnected) {
                     return Promise.resolve();
                 }
-                return this._connect();
+                return this._connect(timeout);
             });
     }
-    _connect() {
+    _cleanup() {
+        // Clear services cache on disconnect
+        this.services = new Map();
+        this.discovered = false;
+        this.close()
+            .then(() => {
+                this.emit('disconnect');
+            });
+    }
+    _connect(timeout = 5000) {
         return new Promise((resolve, reject) => {
+            let to = setTimeout(() => {
+                this._cleanup();
+                reject(new Error('Unable to connect in ${timeout}ms.'));
+            }, timeout);
+
             BluetoothManager.adapter.connect((result) => {
+                clearTimeout(to);
                 if (result.status === 'connected') {
                     resolve();
                 } else if (result.status === 'disconnected') {
-                    // Clear services cache on disconnect
-                    this.services = new Map();
-                    this.discovered = false;
-                    this.close()
-                        .then(() => {
-                            this.emit('disconnect');
-                        });
+                    this._cleanup();
                 }
             }, reject, { address: this.address });
         });
@@ -149,8 +158,19 @@ class Device extends EventEmitter {
             .then(status => status.isConnected)
             .catch(() => false);
     }
-    reconnect() {
-        return pCall('reconnect', { address: this.address });
+    reconnect(timeout) {
+        return new Promise((resolve, reject) => {
+            let to = setTimeout(reject, timeout);
+            pCall('reconnect', { address: this.address })
+                .then(data => {
+                    clearTimeout(to);
+                    resolve(data);
+                })
+                .catch(e => {
+                    clearTimeout(to);
+                    reject(e);
+                });
+        });
     }
     close() {
         return pCall('close', { address: this.address });

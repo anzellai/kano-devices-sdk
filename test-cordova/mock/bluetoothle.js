@@ -32,6 +32,29 @@ class BluetoothLE {
         clearInterval(this.scanInterval);
         resolve();
     }
+    connect(resolve, reject, opts) {
+        setTimeout(() => {
+            resolve({
+                status: 'connected'
+            });
+        }, 1000);
+    }
+    close(resolve, reject, opts) {
+        let index = -1;
+        this.emittedDevices.some((device, i) => {
+            if (device.address == opts.address) {
+                index = i;
+                return true;
+            }
+            return false;
+        });
+
+        if (index >= 0) {
+            this.emittedDevices.splice(index, 1);
+        }
+
+        resolve();
+    }
     disconnect(resolve, reject, opts) {
         resolve();
     }

@@ -7,10 +7,10 @@ suite('#Devices', () => {
     setup(() => {
         CordovaSetup();
     });
-    test('searchForClosestDevice()', () => {
+    test('searchForDevice()', () => {
         return new Promise((resolve, reject) => {
             let devicePrefix = 'Kano-Wand'; // add more devices if needed.
-            Manager.searchForDevice(devicePrefix, 3000)
+            Manager.searchForDevice(devicePrefix, 1000)
                 .then(wand => {
                     if (wand.device.name.startsWith(devicePrefix)) {
                         return resolve();

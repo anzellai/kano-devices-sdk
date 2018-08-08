@@ -97,12 +97,12 @@ const BLEDeviceMixin = (Device) => {
             }
             return this._setupPromise;
         }
-        connect() {
+        connect(timeout=5000) {
             if (this.state === 'connected') {
                 return Promise.resolve();
             }
             this.setState('connecting');
-            return BLEDevice.connectToPeripheral(this.device);
+            return BLEDevice.connectToPeripheral(this.device, timeout);
         }
         disconnect() {
             this._manuallyDisconnected = true;
@@ -213,11 +213,17 @@ const BLEDeviceMixin = (Device) => {
                 });
             });
         }
-        static connectToPeripheral(peripheral) {
+        static connectToPeripheral(peripheral, timeout = 5000) {
             if (peripheral.state === 'connected') {
                 return Promise.resolve();
             }
             return new Promise((resolve, reject) => {
+                let to = setTimeout(() => {
+                    // Calling disconnect will cancel the connect try
+                    peripheral.disconnect()
+                        .catch(e => this.manager.log.trace(`Unable to disconnect ${e}`);
+                    reject(new Error('Unable to connect in ${timeout}ms.'));
+                }, timeout);
                 peripheral.connect((err) => {
                     if (err) {
                         return reject(err);

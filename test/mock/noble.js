@@ -25,6 +25,9 @@ class BLEDevice extends EventEmitter {
             rssi: (-1 * parseInt(100 * Math.random()))
         };
     }
+    connect(callback) {
+        setTimeout(callback, 1000);
+    }
 }
 
 class Noble extends EventEmitter {
