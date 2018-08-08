@@ -221,7 +221,7 @@ const BLEDeviceMixin = (Device) => {
                 let to = setTimeout(() => {
                     // Calling disconnect will cancel the connect try
                     peripheral.disconnect()
-                        .catch(e => this.manager.log.trace(`Unable to disconnect ${e}`);
+                        .catch(e => this.manager.log.trace(`Unable to disconnect ${e}`));
                     reject(new Error('Unable to connect in ${timeout}ms.'));
                 }, timeout);
                 peripheral.connect((err) => {

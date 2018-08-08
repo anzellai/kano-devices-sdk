@@ -33,7 +33,9 @@ describe('Device', () => {
             Devices.searchForDevice('Kano-Wand-')
                 .then(device => {
                     device.connect(1)
-                        .then(reject)
+                        .then(() => {
+                            reject(new Error('Connected too fast.'));
+                        })
                         .catch(resolve);
                 })
                 .catch(reject);
