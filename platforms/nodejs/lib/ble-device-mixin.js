@@ -15,6 +15,7 @@ const BLEDeviceMixin = (Device) => {
             }
             this.onDisconnect = this.onDisconnect.bind(this);
             this.watcher = new Watcher();
+            this.watcher.setLogger(this.manager.log);
             // Subscriptions persist accross device handle switch
             this.subManager = new SubscriptionsManager({
                 subscribe: this._subscribe.bind(this),

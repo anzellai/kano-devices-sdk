@@ -957,7 +957,7 @@ class Devices extends events.EventEmitter {
         }
     }
     createDFUDevice(device) {
-        return new this.DFU(device.device);
+        return new this.DFU(device.device, this);
     }
     getById(id) {
         return this.devices.get(id);
