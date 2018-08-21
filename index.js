@@ -934,6 +934,8 @@ class Devices extends events.EventEmitter {
             .then(() => {
                 this.log.trace('Update package loaded');
                 this.log.trace('Enabling DFU mode...');
+                // Flag as manually disconnected to prevent auto reconnect
+                device._manuallyDisconnected = true;
                 return dfuDevice.setDfuMode();
             })
             .then(() => {
