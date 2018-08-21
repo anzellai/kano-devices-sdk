@@ -938,6 +938,9 @@ class Devices extends events.EventEmitter {
             })
             .then(() => {
                 this.log.trace('DFU mode enabled');
+                return dfuDevice.terminate();
+            })
+            .then(() => {
                 this.log.trace('Searching for DFU device...');
                 return this.searchForDfuDevice(dfuDevice.dfuName);
             })
@@ -956,7 +959,7 @@ class Devices extends events.EventEmitter {
             })
             .then(() => {
                 this.log.trace('Reconnecting to device');
-                device.connect();
+                return device.reconnect();
             });
 
     }
