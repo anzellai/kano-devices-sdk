@@ -1,6 +1,6 @@
 # kano-devices-sdk
 
-Allows the detection and comunication with Kanon devices.
+Allows the detection and comunication with Kano devices.
 
 ## Class Diagram
 
