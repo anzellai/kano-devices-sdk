@@ -18,8 +18,7 @@ const BLEDeviceMixin = (Device) => {
                 subscribe: this._subscribe.bind(this),
                 unsubscribe: this._unsubscribe.bind(this),
             });
-            this.watcher = new Watcher();
-            this.watcher.setLogger(this.manager.log);
+            this.watcher = this.manager.watcher;
             this.reset(device);
         }
         reset(device, keepState = false) {
