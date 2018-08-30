@@ -210,6 +210,7 @@ const BLEDeviceMixin = (Device) => {
                     }
                 })
                 .then(() => {
+                    this.watcher.deleteCachedDevice(this.device.address);
                     this.device.removeAllListeners();
                     this.manager.removeDevice(this);
                     return Promise.resolve();

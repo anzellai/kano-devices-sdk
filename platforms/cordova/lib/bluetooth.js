@@ -254,6 +254,12 @@ class Bluetooth extends EventEmitter {
             reject,
         ));
     }
+    deleteCachedDevice(deviceAddress) {
+        return this.devices.delete(deviceAddress);
+    }
+    cleanCache() {
+        this.devices = new Map();
+    }
     startScan(options) {
         if (this.state == 'paused') {
             return Promise.reject(new Error('The device is paused.'));

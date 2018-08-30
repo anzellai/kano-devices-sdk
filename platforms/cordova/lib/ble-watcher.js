@@ -152,6 +152,10 @@ class BLEWatcher {
                 }
             });
     }
+    deleteCachedDevice(deviceAddress) {
+        this.devices.delete(deviceAddress);
+        Bluetooth.deleteCachedDevice(deviceAddress);
+    }
 }
 
 export default BLEWatcher;
