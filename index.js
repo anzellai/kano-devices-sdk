@@ -562,10 +562,17 @@ const DFUMixin = (BLEDevice) => {
                     .then(() => {
                         let auxAddress = this.device.address.substr(this.device.address.length - 5).replace(':', '-');
                         this.dfuName = `DFU-${auxAddress}`;
+
+                        let dfuNameBuffer = new ArrayBuffer(this.dfuName.length);
+                        let bufView = new Uint8Array(dfuNameBuffer);
+                        this.dfuName.split('').forEach((el, index) => {
+                            bufView[index] = el.charCodeAt();
+                        });
+
                         return this.sendOperation(
                             BUTTON_UUID, 
                             OPERATIONS.SET_DFU_NAME.concat(this.dfuName.length), 
-                            new ArrayBuffer(this.dfuName)
+                            dfuNameBuffer
                         );
                     })
                     .then(() => new Promise(r => setTimeout(r, 100)))
@@ -774,8 +781,8 @@ const DFUMixin = (BLEDevice) => {
                 .then(() => {
                     return new Promise((resolve, reject) => {
                         // Enable the receipt notification
-                        let value = new ArrayBuffer(2);
-                        value.writeUInt16LE(RECEIPT_NOTIFICATION_PACKETS, 0);
+                        let value = new Uint8Array(2);
+                        value[0] = RECEIPT_NOTIFICATION_PACKETS;
 
                         this.sendControl(OPERATIONS.RECEIPT_NOTIFICATIONS, value)
                             .then(resolve);
@@ -936,11 +943,15 @@ class Devices extends events.EventEmitter {
                 this.log.trace('Enabling DFU mode...');
                 // Flag as manually disconnected to prevent auto reconnect
                 device._manuallyDisconnected = true;
+                dfuDevice._manuallyDisconnected = true;
                 return dfuDevice.setDfuMode();
             })
             .then(() => {
                 this.log.trace('DFU mode enabled');
-                return dfuDevice.terminate();
+                return dfuDevice.dispose()
+                    .catch((e) => {
+                        this.log.error('Unable to close the dfuDevice...', e);
+                    });
             })
             .then(() => {
                 this.log.trace('Searching for DFU device...');
@@ -957,7 +968,7 @@ class Devices extends events.EventEmitter {
                     .then(() => {
                         this.log.trace('Update finished, disconnecting...');
                     })
-                    .then(() => dfuTarget.terminate());
+                    .then(() => dfuTarget.dispose());
             })
             .then(() => {
                 this.log.trace('Reconnecting to device');
@@ -966,17 +977,9 @@ class Devices extends events.EventEmitter {
 
     }
     addDevice(device) {
-        let alreadyAdded = false;
-        this.devices.forEach(dev => {
-            if (dev.device.address === device.device.address) {
-                alreadyAdded = true;
-            }
-        });
-        if (!alreadyAdded) {
-            this.log.info(`Adding device ${device.id}`);
-            this.devices.set(device.id, device);
-            this.emit('new-device', device);
-        }
+        this.log.info(`Adding/Updating device ${device.id}`);
+        this.devices.set(device.id, device);
+        this.emit('new-device', device);
     }
     createDFUDevice(device) {
         return new this.DFU(device.device, this);
