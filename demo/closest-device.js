@@ -10,8 +10,8 @@ Devices.setLogger(logger);
 
 // Devices.searchForDevice('Kano-Wand-fe')
 Devices.searchForClosestDevice('wand')
-    .then(device => console.log("Closest device:", device))
-    .catch(e => console.log("Unable to get the closest device, err: ", e));
+    .then((device) => console.log("Closest device:", device))
+    .catch((e) => console.log("Unable to get the closest device, err: ", e));
 
 process.on('exit', () => {
     Devices.terminate();
