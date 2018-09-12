@@ -40,9 +40,11 @@ class Noble extends EventEmitter {
         this.emittedDevices = [];
 
         this.state = 'poweredOn';
+        this.isScanning = false;
     }
     
     startScanning() {
+        this.isScanning = true;
         this.scannerInterval = setInterval(() => {
             let nameGenerator = devicesPrefixes[parseInt(devicesPrefixes.length * Math.random())];
 
@@ -52,6 +54,7 @@ class Noble extends EventEmitter {
     }
 
     stopScanning() {
+        this.isScanning = false;
         clearInterval(this.scannerInterval);
     }
 }

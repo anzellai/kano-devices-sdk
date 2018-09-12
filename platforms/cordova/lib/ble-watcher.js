@@ -97,7 +97,10 @@ class BLEWatcher {
                         return resolve(closestDevice);
                     }, timeout);
                 })
-                .catch(reject);
+                .catch((e) => {
+                    this.stopScan();
+                    reject(e);
+                });
         });
     }
     startScan() {
@@ -126,7 +129,11 @@ class BLEWatcher {
                         this.log.trace(`Discovered device: ${device.name} -> Did match`);
                         clearTimeout(search.to);
                         this.searches.splice(index, 1);
-                        search.resolve(this.devices.get(device.address));
+                        this.stopScan()
+                            .then(() => {
+                                search.resolve(this.devices.get(device.address));
+                            })
+                            .catch(search.reject);
                     });
                 };
                 Bluetooth.on('scan-result', this.scanResultCallback);

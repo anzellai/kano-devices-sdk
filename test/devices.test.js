@@ -21,6 +21,11 @@ describe('Search for devices', () => {
                     if (device.device.advertisement.localName.startsWith(devicePrefix)) {
                         resolve();
                     }
+
+                    if (noble.isScanning) {
+                        reject(new Error('At this point the scanning should be stopped'));
+                    }
+
                     reject();
                 })
                 .catch(reject);
@@ -36,6 +41,10 @@ describe('Search for devices', () => {
                             reject(new Error('Found a closer device.'));
                         }
                     });
+
+                    if (noble.isScanning) {
+                        reject(new Error('At this point the scanning should be stopped'));
+                    }
                     resolve();
                 })
                 .catch(reject);
