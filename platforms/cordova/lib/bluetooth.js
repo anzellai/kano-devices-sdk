@@ -150,7 +150,7 @@ class Device extends EventEmitter {
                 } else if (result.status === 'disconnected') {
                     this._cleanup();
                 }
-            }, reject, { address: this.address });
+            }, reject, { address: this.address, clearCache: true });
         });
     }
     isConnected() {
@@ -183,7 +183,7 @@ class Device extends EventEmitter {
             return Promise.resolve(this.services);
         }
         this.discovered = true;
-        return pCall('discover', { address: this.address, clearCache: true })
+        return pCall('discover', { address: this.address })
             .then((result) => {
                 result.services.forEach(serviceData =>
                     this.services.set(serviceData.uuid, new Service(
