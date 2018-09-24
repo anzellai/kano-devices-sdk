@@ -1,7 +1,14 @@
+import { subscribe } from '@kano/common/index.js';
 import SubscriptionsManager from '../../../lib/subscriptions-manager.js';
-import Watcher from './ble-watcher.js';
 
 const RECONNECT_SCAN_TIMEOUT = 30000;
+
+const STATES = Object.freeze({
+    CONNECTED: 'connected',
+    DISCONNECTED: 'disconnected',
+    CONNECTING: 'connecting',
+    RECONNECTING: 'reconnecting',
+});
 
 const BLEDeviceMixin = (Device) => {
     class BLEDevice extends Device {
@@ -13,7 +20,6 @@ const BLEDeviceMixin = (Device) => {
             if (this.abstract) {
                 return;
             }
-            this.onDisconnect = this.onDisconnect.bind(this);
             this.subManager = new SubscriptionsManager({
                 subscribe: this._subscribe.bind(this),
                 unsubscribe: this._unsubscribe.bind(this),
@@ -24,9 +30,16 @@ const BLEDeviceMixin = (Device) => {
         reset(device, keepState = false) {
             this.device = device;
             this._setupPromise = null;
-            this.device.on('disconnect', this.onDisconnect);
+            if (this._disconnectSub) {
+                this._disconnectSub.dispose();
+            }
+            this._disconnectSub = subscribe(
+                this.device,
+                'disconnect',
+                this.onDisconnect.bind(this),
+            );
             if (!keepState) {
-                this.state = 'disconnected';
+                this.state = STATES.DISCONNECTED;
             }
         }
         setState(state) {
@@ -35,19 +48,19 @@ const BLEDeviceMixin = (Device) => {
             this.state = state;
             if (oldState !== state) {
                 switch (state) {
-                case 'connected': {
+                case STATES.CONNECTED: {
                     this.emit('connect');
                     break;
                 }
-                case 'disconnected': {
+                case STATES.DISCONNECTED: {
                     this.emit('disconnect');
                     break;
                 }
-                case 'connecting': {
+                case STATES.CONNECTING: {
                     this.emit('connecting');
                     break;
                 }
-                case 'reconnecting': {
+                case STATES.RECONNECTING: {
                     this.emit('reconnecting');
                     break;
                 }
@@ -59,7 +72,9 @@ const BLEDeviceMixin = (Device) => {
         }
         onDisconnect() {
             this.manager.log.trace(`[${this.getAdvertisementName()}]: Disconnect event received`);
-            if (this.state === 'disconnected' || this.state === 'connecting') {
+            if (this.state === STATES.DISCONNECTED
+                || this.state === STATES.DISCONNECTED
+                || this.state === STATES.RECONNECTING) {
                 return;
             }
             // Flag all subscriptions as not subscribed
@@ -67,14 +82,14 @@ const BLEDeviceMixin = (Device) => {
             if (!this._manuallyDisconnected) {
                 this.reconnect();
             } else {
-                this.setState('disconnected');
+                this.setState(STATES.DISCONNECTED);
             }
         }
         onManualDisconnect() {
             this.subManager.clear();
         }
         setup() {
-            if (this.state === 'reconnecting') {
+            if (this.state === STATES.RECONNECTING) {
                 return Promise.reject(new Error('Cannot setup device while reconnecting'));
             }
             if (!this._setupPromise) {
@@ -82,42 +97,42 @@ const BLEDeviceMixin = (Device) => {
                     .then(() => new Promise(resolve => setTimeout(resolve, 1000)))
                     .then(() => this.discover())
                     .then(() => {
-                        this.setState('connected');
+                        this.setState(STATES.CONNECTED);
                     });
             }
             return this._setupPromise;
         }
         connect(timeout = 5000) {
-            if (this.state === 'connected') {
+            if (this.state === STATES.CONNECTED) {
                 return Promise.resolve();
             }
-            this.setState('connecting');
+            this.setState(STATES.CONNECTING);
             return new Promise((resolve, reject) => {
                 if (!this.previouslyConnected) {
                     this.device.connect(timeout)
                         .then(data => {
                             this.previouslyConnected = true;
-                            this.setState('connected');
+                            this.setState(STATES.CONNECTED);
                             resolve(data);
                         }, err => {
-                            this.setState('disconnected');
+                            this.setState(STATES.DISCONNECTED);
                             reject(err);
                         });
                 } else {
                     this.device.reconnect(timeout)
                         .then(data => {
                             this.previouslyConnected = true;
-                            this.setState('connected');
+                            this.setState(STATES.CONNECTED);
                             resolve(data);
                         }, err => {
-                            this.setState('disconnected');
+                            this.setState(STATES.DISCONNECTED);
                             reject(err);
                         });
                 }
             });
         }
         reconnect() {
-            this.setState('reconnecting');
+            this.setState(STATES.RECONNECTING);
             const testFunc = p => BLEDevice.normalizeAddress(p.address) === this.device.address;
             // Was connected before, so address should be available on apple devices
             return this.watcher.searchForDevice(testFunc, RECONNECT_SCAN_TIMEOUT)
@@ -130,12 +145,13 @@ const BLEDeviceMixin = (Device) => {
                         .then(() => {
                             // Resubsribe to the characteristics if needed
                             this.subManager.resubscribe();
-                            this.setState('connected');
+                            this.setState(STATES.CONNECTED);
                         });
                     return this._setupPromise;
                 })
-                .catch(() => {
-                    this.setState('disconnected');
+                .catch((e) => {
+                    this.setState(STATES.DISCONNECTED);
+                    throw e;
                 });
         }
         discover() {
@@ -145,7 +161,7 @@ const BLEDeviceMixin = (Device) => {
         disconnect() {
             this._manuallyDisconnected = true;
             return this.device.disconnect()
-                .then(() => this.setState('disconnected'))
+                .then(() => this.setState(STATES.DISCONNECTED))
                 .then(() => this.onManualDisconnect());
         }
         write(sId, cId, value) {
@@ -199,7 +215,7 @@ const BLEDeviceMixin = (Device) => {
         dispose() {
             return Promise.resolve()
                 .then(() => {
-                    if (this.state !== 'disconnected') {
+                    if (this.state !== STATES.DISCONNECTED) {
                         return this.disconnect();
                     }
                 })
