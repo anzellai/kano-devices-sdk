@@ -73,7 +73,7 @@ const BLEDeviceMixin = (Device) => {
         onDisconnect() {
             this.manager.log.trace(`[${this.getAdvertisementName()}]: Disconnect event received`);
             if (this.state === STATES.DISCONNECTED
-                || this.state === STATES.DISCONNECTED
+                || this.state === STATES.CONNECTING
                 || this.state === STATES.RECONNECTING) {
                 return;
             }
