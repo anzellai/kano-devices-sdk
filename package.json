@@ -27,7 +27,7 @@
     "jszip": "^3.1.5"
   },
   "optionalDependencies": {
-    "noble-mac": "https://github.com/Timeular/noble-mac.git#0.0.1",
+    "noble-mac": "https://github.com/Timeular/noble-mac.git#3d8046d",
     "noble-uwp": "^0.6.1"
   }
 }

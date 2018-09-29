@@ -818,9 +818,9 @@ negotiator@0.6.1:
   version "0.6.1"
   resolved "https://registry.yarnpkg.com/negotiator/-/negotiator-0.6.1.tgz#2b327184e8992101177b28563fb5e7102acd0ca9"
 
-"noble-mac@https://github.com/Timeular/noble-mac.git#0.0.1":
+"noble-mac@https://github.com/Timeular/noble-mac.git#3d8046d":
   version "0.0.1"
-  resolved "https://github.com/Timeular/noble-mac.git#c0205b47feea76e4d7a1aff1528e982493eff74d"
+  resolved "https://github.com/Timeular/noble-mac.git#3d8046d330624e1d1c66fc4d6a3ed7598eba8f69"
   dependencies:
     napi-thread-safe-callback "0.0.6"
     noble "^1.9.1"
