@@ -58,9 +58,9 @@ class BLEWatcher extends EventEmitter {
         this.watcher.uncacheDevice(deviceAddress);
     }
 
-    searchForClosestDevice(testFunc, timeout=3000) {
+    searchForClosestDevice(testFunc, timeout = 3000) {
         return new Promise((resolve, reject) => {
-            let devicesFound = new Map();
+            const devicesFound = new Map();
 
             const onDiscover = (peripheral) => {
                 const name = peripheral.advertisement
@@ -69,20 +69,20 @@ class BLEWatcher extends EventEmitter {
                     this.log.trace(`Discovered device: ${name} -> Not a candidate for this search`);
                     return;
                 }
-                
+
                 this.log.trace(`Discovered device: ${name} -> Did match`);
                 // Update the device
                 devicesFound.set(peripheral.id, peripheral);
             };
-            
+
             this.watcher.on('discover', onDiscover);
             this.watcher.start();
-            
+
             setTimeout(() => {
                 this.log.trace('Finding closest device amongst results...');
                 this.watcher.removeListener('discover', onDiscover);
                 this.watcher.stop();
-                
+
                 if (devicesFound.size <= 0) {
                     this.log.trace('No device found, bail out from sorting by rssi');
                     return reject(new Error(`No devices have been found after ${timeout}ms.`));

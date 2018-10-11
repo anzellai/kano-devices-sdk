@@ -2,10 +2,6 @@
 
 Allows the detection and comunication with Kano devices.
 
-## Class Diagram
-
-![](./Kano-Device-SDK-classes.png)
-
 ## Platform independance
 
 This SDK aims to be platform independant as it doesn't implement any Bluetooth, Wi-FI or serial communication.

@@ -1,26 +1,34 @@
 {
   "name": "@kano/devices-sdk",
   "version": "1.0.1",
-  "description": "",
+  "description": "Allows the detection and comunication with Kano devices.",
   "main": "index.js",
   "directories": {
     "lib": "lib"
   },
   "scripts": {
-    "test-jenkins": "JUNIT_REPORT_PATH=./test-results.xml mocha --colors --reporter mocha-jenkins-reporter --timeout 30000",
+    "test-ci": "JUNIT_REPORT_PATH=./test-results.xml mocha --colors --reporter mocha-jenkins-reporter --timeout 30000",
     "test": "mocha --exit --timeout 30000",
-    "cjs": "rollup -c"
+    "test-cordova": "web-tester run ./test-cordova/devices",
+    "test-cordova-ci": "yarn run --silent test-cordova > cordova-test-results.xml",
+    "cjs": "rollup -c",
+    "checkstyle": "eslint ./lib ./platforms",
+    "checkstyle-ci": "yarn checkstyle -f checkstyle -o eslint.xml"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Kano Computing <dev@kano.me>",
+  "license": "MIT",
   "devDependencies": {
+    "@kano/web-tester": "^1.0.0-alpha.5",
     "chai": "^4.1.2",
     "chai-as-promised": "^7.1.1",
     "mocha": "^5.2.0",
     "mocha-jenkins-reporter": "^0.3.12",
     "mock-require": "^3.0.2",
     "rollup": "^0.56.5",
-    "socket.io": "^2.0.4"
+    "socket.io": "^2.0.4",
+    "@kano/eslint-config": "^1.0.0",
+    "eslint": "^4.19.1",
+    "eslint-plugin-import": "^2.14.0"
   },
   "dependencies": {
     "@kano/common": "^1.0.2",

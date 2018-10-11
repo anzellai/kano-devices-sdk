@@ -1,4 +1,3 @@
-import { assert, test, suite, teardown } from '../tools.js';
 import Manager from '../../../platforms/cordova/index.js';
 
 suite('#Logger', () => {

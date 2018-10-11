@@ -3,7 +3,7 @@ const NobleWatcherBase = require('./noble-watcher-base');
 
 let noble;
 
-if (os.release() === '18.0.0') {    // macOS Mojave
+if (os.release() === '18.0.0') { // macOS Mojave
     noble = require('noble-mac');
 } else {
     noble = require('noble');

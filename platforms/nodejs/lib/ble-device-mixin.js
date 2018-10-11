@@ -23,7 +23,7 @@ const BLEDeviceMixin = (Device) => {
             });
             // Reset providing the device handle found
             this.reset(device);
-            
+
             this.device.on('disconnect', this.onDisconnect);
         }
         reset(device, keepState = false) {
@@ -98,7 +98,7 @@ const BLEDeviceMixin = (Device) => {
             }
             return this._setupPromise;
         }
-        connect(timeout=5000) {
+        connect(timeout = 5000) {
             if (this.state === 'connected') {
                 return Promise.resolve();
             }
@@ -219,7 +219,7 @@ const BLEDeviceMixin = (Device) => {
                 return Promise.resolve();
             }
             return new Promise((resolve, reject) => {
-                let to = setTimeout(() => {
+                const to = setTimeout(() => {
                     // Calling disconnect will cancel the connect try
                     peripheral.disconnect((err) => {
                         if (err) {
@@ -321,9 +321,7 @@ const BLEDeviceMixin = (Device) => {
         }
         dispose() {
             return this.terminate()
-                .then(() => {
-                    return this.manager.removeDevice(this);
-                });
+                .then(() => this.manager.removeDevice(this));
         }
         terminate() {
             return super.terminate()

@@ -40,7 +40,7 @@ class BLEWatcher {
             }
             // It wasn't found, add it to the searches and start scanning if it is the first search
             this.startScan()
-                .catch(e => console.log("Unable to start scanning ", e));
+                .catch(e => console.log('Unable to start scanning ', e));
             this.searches.push(search);
         });
     }
@@ -62,7 +62,7 @@ class BLEWatcher {
     }
     getDevices(searchFunction) {
         const returnDevices = [];
-        this.devices.forEach(device => {
+        this.devices.forEach((device) => {
             if (searchFunction(device)) {
                 this.log.trace(`Discovered device: ${device.name} -> Did match`);
                 returnDevices.push(device);
@@ -72,7 +72,7 @@ class BLEWatcher {
         });
         return returnDevices;
     }
-    searchForClosestDevice(testFunc, timeout=3000) {
+    searchForClosestDevice(testFunc, timeout = 3000) {
         return new Promise((resolve, reject) => {
             this.startScan()
                 .then(() => {
@@ -80,10 +80,10 @@ class BLEWatcher {
                         if (Bluetooth.getState() == 'paused') {
                             return reject(new Error('The device was paused.'));
                         }
-                        let closestDevice = undefined;
+                        let closestDevice;
                         this.log.trace('Finding closest device amongst results...');
                         this.getDevices(testFunc)
-                            .forEach(device => {
+                            .forEach((device) => {
                                 closestDevice = closestDevice || device;
                                 this.log.trace(`RSSI Sort: ${device.name} => ${device.rssi}`);
                                 if (!closestDevice || (closestDevice.rssi < device.rssi)) {
@@ -113,13 +113,13 @@ class BLEWatcher {
                 this.isScanning = true;
                 this.scanResultCallback = (device) => {
                     // Update the watcher devices list
-                    let auxDevice = this.devices.get(device.address);
+                    const auxDevice = this.devices.get(device.address);
                     if (!auxDevice) {
                         this.devices.set(device.address, device);
                     } else {
                         Object.assign(auxDevice, device);
                     }
-                    
+
                     this.searches.forEach((search, index) => {
                         const isMatch = search.test(device);
                         if (!isMatch) {

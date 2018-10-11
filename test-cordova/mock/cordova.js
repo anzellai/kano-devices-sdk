@@ -1,4 +1,4 @@
-import {BluetoothLESetup, BluetoothLETeardown} from '../mock/bluetoothle.js';
+import { BluetoothLESetup, BluetoothLETeardown } from '../mock/bluetoothle.js';
 
 class Cordova {
     constructor() {

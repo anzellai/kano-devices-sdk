@@ -110,21 +110,21 @@ const BLEDeviceMixin = (Device) => {
             return new Promise((resolve, reject) => {
                 if (!this.previouslyConnected) {
                     this.device.connect(timeout)
-                        .then(data => {
+                        .then((data) => {
                             this.previouslyConnected = true;
                             this.setState(STATES.CONNECTED);
                             resolve(data);
-                        }, err => {
+                        }, (err) => {
                             this.setState(STATES.DISCONNECTED);
                             reject(err);
                         });
                 } else {
                     this.device.reconnect(timeout)
-                        .then(data => {
+                        .then((data) => {
                             this.previouslyConnected = true;
                             this.setState(STATES.CONNECTED);
                             resolve(data);
-                        }, err => {
+                        }, (err) => {
                             this.setState(STATES.DISCONNECTED);
                             reject(err);
                         });

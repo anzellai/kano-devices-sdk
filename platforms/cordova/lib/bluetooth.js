@@ -138,7 +138,7 @@ class Device extends EventEmitter {
     }
     _connect(timeout = 5000) {
         return new Promise((resolve, reject) => {
-            let to = setTimeout(() => {
+            const to = setTimeout(() => {
                 this._cleanup();
                 reject(new Error('Unable to connect in ${timeout}ms.'));
             }, timeout);
@@ -160,13 +160,13 @@ class Device extends EventEmitter {
     }
     reconnect(timeout) {
         return new Promise((resolve, reject) => {
-            let to = setTimeout(reject, timeout);
+            const to = setTimeout(reject, timeout);
             pCall('reconnect', { address: this.address })
-                .then(data => {
+                .then((data) => {
                     clearTimeout(to);
                     resolve(data);
                 })
-                .catch(e => {
+                .catch((e) => {
                     clearTimeout(to);
                     reject(e);
                 });
@@ -206,13 +206,13 @@ class Bluetooth extends EventEmitter {
     setState(newState) {
         if (this.state != newState) {
             this.state = newState;
-            switch(this.state) {
-                case 'paused': {
-                    this.emit('pause');
-                }
-                case 'reusmed': {
-                    this.emit('resume');
-                }
+            switch (this.state) {
+            case 'paused': {
+                this.emit('pause');
+            }
+            case 'reusmed': {
+                this.emit('resume');
+            }
             }
         }
     }

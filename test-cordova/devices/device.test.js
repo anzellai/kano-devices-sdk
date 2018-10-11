@@ -1,6 +1,4 @@
-import {CordovaSetup, CordovaTeardown} from '../mock/cordova.js';
-
-import { setup, test, assert, suite, teardown } from '../tools.js';
+import { CordovaSetup, CordovaTeardown } from '../mock/cordova.js';
 import Manager from '../../../platforms/cordova/index.js';
 
 suite('#Device', () => {

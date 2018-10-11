@@ -1,4 +1,4 @@
-import {generateRandomName, generateAddress} from '../helpers.js';
+import { generateRandomName, generateAddress } from '../helpers.js';
 
 class BluetoothLE {
     constructor() {
