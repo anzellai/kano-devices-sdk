@@ -18,8 +18,12 @@ pipeline {
     }
     stages {
         stage('tools') {
-            def YARN_PATH = tool name: 'yarn'
-            env.PATH = "${env.PATH}:${YARN_PATH}/bin"
+            steps {
+                script {
+                    def YARN_PATH = tool name: 'yarn'
+                    env.PATH = "${env.PATH}:${YARN_PATH}/bin"
+                }
+            }
         }
         stage('install deps') {
             steps {
