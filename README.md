@@ -66,43 +66,6 @@ A BLEDevice must track the state of its connection following this State Machine 
 
 ![](./Connection-state-machine.png)
 
-## Adapters
-
-If required to run in a brwoser environment, you can use the `kano-hardware-communication-lib` to provide a bus communication between this SDK and a browser. This can be done use the bus adapter.
-
-```js
-
-import BusAdapter from './node_modules/kano-devices-sdk/bus-adapters/bus-adapter.js';
-import { Devices } from './node_modules/kano-devices-sdk/kano-devices-sdk.js';
-
-// Dummy bus
-// Give this bus to both the sdk adapter and the device manager
-const bus = new EventEmitter();
-
-```
-
-In the main process of an electron application:
-```js
-const { ipcMain, BrowserWindow } = require('electron');
-
-const window = new BrowserWindow();
-
-// Electron using IPC
-// Give this bus to the sdk adapter
-const bus = new ElectronIpcBus(ipcMain, window);
-
-```
-
-In the renderer process of an electron application:
-```js
-const { ipcRenderer } = require('electron');
-
-// Electron using IPC from the renderer
-// Give this bus to the device manager
-const bus = new ElectronIpcBusRenderer(ipcRenderer);
-
-```
-
 ### Possible future applications:
 
  - Write a websocket adapter
