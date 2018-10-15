@@ -18,17 +18,17 @@
   "author": "Kano Computing <dev@kano.me>",
   "license": "MIT",
   "devDependencies": {
+    "@kano/eslint-config": "^1.0.0",
     "@kano/web-tester": "^1.0.0-alpha.5",
     "chai": "^4.1.2",
     "chai-as-promised": "^7.1.1",
+    "eslint": "^4.19.1",
+    "eslint-plugin-import": "^2.14.0",
     "mocha": "^5.2.0",
     "mocha-jenkins-reporter": "^0.3.12",
     "mock-require": "^3.0.2",
     "rollup": "^0.56.5",
-    "socket.io": "^2.0.4",
-    "@kano/eslint-config": "^1.0.0",
-    "eslint": "^4.19.1",
-    "eslint-plugin-import": "^2.14.0"
+    "socket.io": "^2.0.4"
   },
   "dependencies": {
     "@kano/common": "^1.0.2",

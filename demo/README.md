@@ -4,4 +4,6 @@
 * `dfu-node` - runs a direct firmware update. (The firmware zip files are signed, custom built firmwares won't work.)  
 * `disconnect` - test for the connection events.  
 * `features` - uses the main features of the Wand.  
-* `nodejs` - connects to the wand and prints orientation quaternions and button events.  
+* `nodejs` - connects to the wand and prints orientation quaternions and button events.
+* [🖱 pointer](./pointer) - controls your mouse pointer with a wand. 
+
