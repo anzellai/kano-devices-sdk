@@ -13,7 +13,7 @@ yarn add robotjs
 ## Run
 
 ```
-node demos/pointer
+node demo/pointer
 ```
 
 ## Issues
